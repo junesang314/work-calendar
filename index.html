@@ -532,7 +532,7 @@ html_content = """<!DOCTYPE html>
               <span className="font-semibold text-slate-700">근무 범례:</span>
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-blue-600 rounded-full inline-block"></span><span>당직</span></span>
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-amber-400 rounded-full inline-block"></span><span>주간</span></span>
-              <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-white border border-red-400 text-red-600 font-bold text-[9px] rounded-full flex items-center justify-center inline-block">비</span><span>비번</span></span>
+              <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-white border border-red-300 text-red-600 font-bold text-[9px] rounded-full flex items-center justify-center inline-block">비</span><span>비번</span></span>
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-emerald-600 rounded-full inline-block"></span><span>연차/기타</span></span>
             </div>
             <div className="text-slate-400 text-[11px]">
@@ -910,10 +910,9 @@ html_content = """<!DOCTYPE html>
     root.render(<App />);
   </script>
 </body>
-</html>
-"""
+</html>"""
 
 with open('index.html', 'w', encoding='utf-8') as f:
     f.write(html_content)
 
-print("Updated index.html created!")
+print("Clean index.html saved!")
