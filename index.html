@@ -190,12 +190,11 @@
         const diffX = touchStartX - touchEndX;
         const diffY = touchStartY - touchEndY;
 
-        // 수평 드래그가 수직 스크롤보다 크고, 40px 이상 이동했을 때만 스와이프로 인정
         if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
           if (diffX > 0) {
-            handleNext(); // 왼쪽 스와이프 ➔ 다음 (다음달/다음주/다음해)
+            handleNext();
           } else {
-            handlePrev(); // 오른쪽 스와이프 ➔ 이전 (이전달/이전주/이전해)
+            handlePrev();
           }
         }
 
@@ -294,6 +293,10 @@
         return `${start.replace(/-/g, '.')} ~ ${end.substring(5).replace(/-/g, '.')}`;
       }, [weeklyDays]);
 
+      const toggleYearlyView = () => {
+        setViewMode(prev => (prev === 'yearly' ? 'monthly' : 'yearly'));
+      };
+
       return (
         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
           {/* 상단 헤더 */}
@@ -301,13 +304,19 @@
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               
               <div className="flex items-center space-x-3">
-                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                {/* 캘린더 아이콘 클릭 시 12달 선택 화면으로 전환 */}
+                <div
+                  onClick={toggleYearlyView}
+                  className="p-2.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl cursor-pointer transition active:scale-95"
+                  title="터치하여 12달 선택"
+                >
                   <i className="fa-solid fa-calendar-days text-xl"></i>
                 </div>
+
                 <div>
-                  {/* 월/년 터치 시 12달년도 선택화면으로 전환 */}
+                  {/* 월/년 제목 터치 시 12달 선택 화면으로 전환 */}
                   <div
-                    onClick={() => setViewMode('yearly')}
+                    onClick={toggleYearlyView}
                     className="cursor-pointer group flex items-center space-x-1.5 hover:opacity-80 transition"
                     title="터치하여 12달 보기"
                   >
@@ -1020,9 +1029,4 @@
     root.render(<App />);
   </script>
 </body>
-</html>"""
-
-with open('index.html', 'w', encoding='utf-8') as f:
-    f.write(html_content)
-
-print("Gesture and Year picker index.html written successfully!")
+</html>written successfully!")
