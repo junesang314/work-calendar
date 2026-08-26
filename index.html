@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+html_content = """<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
@@ -18,7 +18,6 @@
     body {
       font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
     }
-    /* custom scrollbar for event lists inside cells */
     .custom-scrollbar::-webkit-scrollbar {
       width: 3px;
     }
@@ -39,7 +38,6 @@
 
     // --- 한국 공휴일 데이터 ---
     const HOLIDAYS_DATA = {
-      // 고정 공휴일 (MM-DD)
       "01-01": "신정",
       "03-01": "삼일절",
       "05-05": "어린이날",
@@ -48,7 +46,6 @@
       "10-03": "개천절",
       "10-09": "한글날",
       "12-25": "성탄절",
-      // 주요 음력 공휴일 (YYYY-MM-DD)
       "2024-02-09": "설날 연휴", "2024-02-10": "설날", "2024-02-11": "설날 연휴", "2024-02-12": "대체공휴일",
       "2024-05-15": "부처님오신날",
       "2024-09-16": "추석 연휴", "2024-09-17": "추석", "2024-09-18": "추석 연휴",
@@ -107,32 +104,24 @@
 
     function App() {
       const today = new Date();
-      
-      // 뷰 모드: 'monthly' | 'weekly'
       const [viewMode, setViewMode] = useState('monthly');
-
-      // 날짜 상태
       const [currentDate, setCurrentDate] = useState(new Date());
 
-      // 1. 패턴 기본 설정
       const [settings, setSettings] = useState(() => {
         const saved = localStorage.getItem('shift_app_settings');
         return saved ? JSON.parse(saved) : { anchorDate: '2026-09-01', anchorShift: '당직' };
       });
 
-      // 2. 날짜별 수동 근무 변경
       const [overrides, setOverrides] = useState(() => {
         const saved = localStorage.getItem('shift_app_overrides');
         return saved ? JSON.parse(saved) : {};
       });
 
-      // 3. 날짜별 개인 일정
       const [events, setEvents] = useState(() => {
         const saved = localStorage.getItem('shift_app_events');
         return saved ? JSON.parse(saved) : {};
       });
 
-      // 모달 상태
       const [selectedDateStr, setSelectedDateStr] = useState(null);
       const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -151,7 +140,6 @@
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
 
-      // 이전/다음 이동 핸들러
       const handlePrev = () => {
         const newDate = new Date(currentDate);
         if (viewMode === 'monthly') {
@@ -176,7 +164,6 @@
         setCurrentDate(new Date());
       };
 
-      // 날짜 데이터 생성 함수
       const getDayInfo = (d) => {
         const yearStr = d.getFullYear();
         const monthStr = String(d.getMonth() + 1).padStart(2, '0');
@@ -208,7 +195,6 @@
         };
       };
 
-      // 월간 날짜 배열
       const monthlyDays = useMemo(() => {
         const firstDay = new Date(year, month, 1);
         const lastDay = new Date(year, month + 1, 0);
@@ -234,7 +220,6 @@
         return days;
       }, [year, month, settings, overrides, events]);
 
-      // 주간 날짜 배열 (현재 날짜가 속한 주 일~토)
       const weeklyDays = useMemo(() => {
         const startOfWeek = new Date(currentDate);
         startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -252,7 +237,6 @@
         return days;
       }, [currentDate, settings, overrides, events]);
 
-      // 이번달 근무 요약 통계
       const monthSummary = useMemo(() => {
         const summary = { 당직: 0, 주간: 0, 비번: 0, 연차: 0 };
         monthlyDays.forEach(day => {
@@ -264,7 +248,6 @@
         return summary;
       }, [monthlyDays]);
 
-      // 주간 뷰의 기간 텍스트 (예: 2026.08.23 - 08.29)
       const weekRangeText = useMemo(() => {
         if (weeklyDays.length === 0) return '';
         const start = weeklyDays[0].dateStr;
@@ -274,11 +257,8 @@
 
       return (
         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
-          {/* 상단 헤더 */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 mb-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              
-              {/* 타이틀 및 날짜 이동 */}
               <div className="flex items-center space-x-3">
                 <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
                   <i className="fa-solid fa-calendar-days text-xl"></i>
@@ -305,9 +285,7 @@
                 </div>
               </div>
 
-              {/* 월간/위클리 모드 전환 & 설정 버튼 */}
               <div className="flex items-center justify-between md:justify-end space-x-3 border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
-                {/* 뷰 모드 토글 스위치 */}
                 <div className="bg-slate-100 p-1 rounded-xl flex items-center text-xs font-bold">
                   <button
                     onClick={() => setViewMode('monthly')}
@@ -331,7 +309,6 @@
                   </button>
                 </div>
 
-                {/* 패턴 설정 버튼 */}
                 <button
                   onClick={() => setIsSettingsOpen(true)}
                   className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium rounded-xl transition shadow-sm"
@@ -340,10 +317,8 @@
                   <span className="hidden sm:inline">패턴 설정</span>
                 </button>
               </div>
-
             </div>
 
-            {/* 통계 요약 바 (월간 뷰 모드에서만 출력) */}
             {viewMode === 'monthly' && (
               <div className="mt-3 pt-3 border-t border-slate-100 flex items-center space-x-2 text-xs font-semibold overflow-x-auto">
                 <span className="text-slate-400 font-normal mr-1">이번달 총계:</span>
@@ -369,10 +344,8 @@
             )}
           </div>
 
-          {/* 1. 월간 (MONTHLY) 뷰 */}
           {viewMode === 'monthly' && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              {/* 요일 헤더 */}
               <div className="grid grid-cols-7 border-b border-slate-200 text-center bg-slate-50/70 font-semibold text-xs py-3 text-slate-600">
                 <div className="text-red-500">일</div>
                 <div>월</div>
@@ -383,7 +356,6 @@
                 <div className="text-blue-500">토</div>
               </div>
 
-              {/* 날짜 그리드 (칸 높이를 더욱 길게 확장: min-h-[155px]) */}
               <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100">
                 {monthlyDays.map((day, idx) => {
                   const isSunday = day.dayOfWeek === 0;
@@ -405,20 +377,13 @@
                       onClick={() => setSelectedDateStr(day.dateStr)}
                       className={`min-h-[150px] p-2 transition cursor-pointer flex flex-col justify-between group hover:bg-slate-50/80 ${
                         !day.isCurrentMonth ? "bg-slate-50/40" : "bg-white"
-                      } ${day.isToday ? "ring-2 ring-blue-500 ring-inset z-10 bg-blue-50/20" : ""}`}
+                      } ${day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""}`}
                     >
-                      {/* 셀 상단: 날짜 및 공휴일 */}
                       <div>
                         <div className="flex items-start justify-between">
                           <span className={`text-sm font-bold ${dateNumColor}`}>
                             {day.dayNum}
                           </span>
-
-                          {day.isToday && (
-                            <span className="text-[10px] font-bold bg-blue-600 text-white px-1.5 py-0.2 rounded-full shadow-xs">
-                              오늘
-                            </span>
-                          )}
                         </div>
 
                         {day.holidayName && day.isCurrentMonth && (
@@ -428,12 +393,10 @@
                         )}
                       </div>
 
-                      {/* 셀 중앙: 근무 배지 */}
                       <div className="my-2 flex flex-col items-center justify-center">
                         <ShiftBadge info={day.shiftInfo} />
                       </div>
 
-                      {/* 셀 하단: 등록된 일정 스크롤 목록 (확장된 공간) */}
                       <div className="space-y-1 mt-auto max-h-[65px] overflow-y-auto custom-scrollbar pr-0.5">
                         {day.dayEvents.map((evt) => (
                           <div
@@ -452,7 +415,6 @@
             </div>
           )}
 
-          {/* 2. 위클리 (WEEKLY) 뷰 */}
           {viewMode === 'weekly' && (
             <div className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
@@ -481,7 +443,6 @@
                         day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"
                       }`}
                     >
-                      {/* 카드 헤더 */}
                       <div className={`p-3 border-b flex items-center justify-between ${headerBg}`}>
                         <div>
                           <div className="text-xs font-semibold opacity-90">{dayNames[day.dayOfWeek]}</div>
@@ -496,15 +457,12 @@
                         )}
                       </div>
 
-                      {/* 카드 바디 */}
                       <div className="p-3 flex-1 flex flex-col justify-between space-y-3">
-                        {/* 근무 배지 */}
                         <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-100">
                           <span className="text-xs font-semibold text-slate-500">오늘의 근무</span>
                           <ShiftBadge info={day.shiftInfo} />
                         </div>
 
-                        {/* 개인 일정 목록 */}
                         <div className="space-y-1.5 flex-1 min-h-[100px]">
                           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
                             <span>일정 ({day.dayEvents.length})</span>
@@ -530,7 +488,6 @@
                           )}
                         </div>
 
-                        {/* 일정 및 근무 편집 버튼 */}
                         <button
                           onClick={() => setSelectedDateStr(day.dateStr)}
                           className="w-full py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition flex items-center justify-center space-x-1"
@@ -546,7 +503,6 @@
             </div>
           )}
 
-          {/* 하단 내비게이션 바 (모바일 및 간편 모드 전환용) */}
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
             <button
               onClick={() => setViewMode('monthly')}
@@ -571,13 +527,12 @@
             </button>
           </div>
 
-          {/* 범례 및 안내 */}
           <div className="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center space-x-4">
               <span className="font-semibold text-slate-700">근무 범례:</span>
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-blue-600 rounded-full inline-block"></span><span>당직</span></span>
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-amber-400 rounded-full inline-block"></span><span>주간</span></span>
-              <span className="flex items-center space-x-1"><span className="text-red-600 font-bold">비번</span><span>비번</span></span>
+              <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-white border border-red-400 text-red-600 font-bold text-[9px] rounded-full flex items-center justify-center inline-block">비</span><span>비번</span></span>
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-emerald-600 rounded-full inline-block"></span><span>연차/기타</span></span>
             </div>
             <div className="text-slate-400 text-[11px]">
@@ -585,7 +540,6 @@
             </div>
           </div>
 
-          {/* 모달 1: 날짜 상세 & 수동 편집 모달 */}
           {selectedDateStr && (
             <DateDetailModal
               dateStr={selectedDateStr}
@@ -616,7 +570,6 @@
             />
           )}
 
-          {/* 모달 2: 패턴 설정 모달 */}
           {isSettingsOpen && (
             <SettingsModal
               settings={settings}
@@ -631,9 +584,8 @@
       );
     }
 
-    // 근무 배지 컴포넌트
     function ShiftBadge({ info }) {
-      const { shift, isOverride, isRuleModified } = info;
+      const { shift, isOverride } = info;
 
       if (shift === '당직') {
         return (
@@ -663,17 +615,12 @@
 
       if (shift === '비번') {
         return (
-          <div className="relative flex items-center">
-            <span className="text-red-600 font-extrabold text-xs px-1.5 py-0.5 rounded border border-red-100 bg-red-50/60">
-              비번
+          <div className="relative group">
+            <span className="w-7 h-7 bg-white text-red-600 border border-red-300 rounded-full flex items-center justify-center text-xs font-bold shadow-xs">
+              비
             </span>
-            {isRuleModified && !isOverride && (
-              <span className="text-[9px] text-red-400 font-normal ml-0.5" title="주간일이나 휴일로 인해 비번 변경됨">
-                (휴)
-              </span>
-            )}
             {isOverride && (
-              <span className="w-1.5 h-1.5 bg-amber-500 rounded-full ml-1" title="수동 수정됨"></span>
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 border-2 border-white rounded-full" title="수동 수정됨"></span>
             )}
           </div>
         );
@@ -686,7 +633,6 @@
       );
     }
 
-    // 날짜 상세 및 수정 모달
     function DateDetailModal({
       dateStr,
       onClose,
@@ -726,7 +672,6 @@
       return (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-150">
-            
             <div className="bg-slate-800 text-white px-5 py-4 flex items-center justify-between">
               <div>
                 <div className="flex items-center space-x-2">
@@ -795,7 +740,7 @@
                     onClick={() => onSetOverride(null)}
                     className="mt-2 text-xs text-blue-600 hover:underline font-medium flex items-center space-x-1"
                   >
-                    <i className="fa-solid fa-rotate-left text-[10px]"></i>
+                    <i className="fa-rotate-left text-[10px]"></i>
                     <span>기본 자동 스케줄로 복원</span>
                   </button>
                 )}
@@ -866,7 +811,6 @@
                   </button>
                 </form>
               </div>
-
             </div>
 
             <div className="bg-slate-50 px-5 py-3 border-t border-slate-100 flex justify-end">
@@ -877,13 +821,11 @@
                 닫기
               </button>
             </div>
-
           </div>
         </div>
       );
     }
 
-    // 패턴 설정 모달
     function SettingsModal({ settings, onSave, onClose }) {
       const [anchorDate, setAnchorDate] = useState(settings.anchorDate);
       const [anchorShift, setAnchorShift] = useState(settings.anchorShift);
@@ -896,7 +838,6 @@
       return (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-150">
-            
             <div className="bg-slate-800 text-white px-5 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <i className="fa-solid fa-sliders text-blue-400"></i>
@@ -960,7 +901,6 @@
                 </button>
               </div>
             </form>
-
           </div>
         </div>
       );
@@ -971,3 +911,9 @@
   </script>
 </body>
 </html>
+"""
+
+with open('index.html', 'w', encoding='utf-8') as f:
+    f.write(html_content)
+
+print("Updated index.html created!")
