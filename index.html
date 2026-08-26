@@ -29,6 +29,22 @@
       background: #cbd5e1;
       border-radius: 3px;
     }
+
+    /* 화면 전환 슬라이드 애니메이션 */
+    @keyframes slideFromRight {
+      0% { transform: translateX(35px); opacity: 0.2; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideFromLeft {
+      0% { transform: translateX(-35px); opacity: 0.2; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+    .animate-slide-right {
+      animation: slideFromRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-slide-left {
+      animation: slideFromLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen pb-20 sm:pb-6 select-none">
@@ -109,6 +125,9 @@
       const [viewMode, setViewMode] = useState('monthly');
       const [currentDate, setCurrentDate] = useState(new Date());
 
+      // 이동 애니메이션 방향 상태 ('right' | 'left')
+      const [slideDirection, setSlideDirection] = useState('right');
+
       // 터치 스와이프 감지용 상태
       const [touchStartX, setTouchStartX] = useState(null);
       const [touchStartY, setTouchStartY] = useState(null);
@@ -146,8 +165,9 @@
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
 
-      // 이전/다음 이동 핸들러
+      // 이전/다음 이동 핸들러 (슬라이드 애니메이션 방향 적용)
       const handlePrev = () => {
+        setSlideDirection('left');
         const newDate = new Date(currentDate);
         if (viewMode === 'yearly') {
           newDate.setFullYear(newDate.getFullYear() - 1);
@@ -160,6 +180,7 @@
       };
 
       const handleNext = () => {
+        setSlideDirection('right');
         const newDate = new Date(currentDate);
         if (viewMode === 'yearly') {
           newDate.setFullYear(newDate.getFullYear() + 1);
@@ -172,6 +193,7 @@
       };
 
       const goToday = () => {
+        setSlideDirection('right');
         setCurrentDate(new Date());
       };
 
@@ -294,6 +316,7 @@
       }, [weeklyDays]);
 
       const toggleYearlyView = () => {
+        setSlideDirection('right');
         setViewMode(prev => (prev === 'yearly' ? 'monthly' : 'yearly'));
       };
 
@@ -304,7 +327,6 @@
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               
               <div className="flex items-center space-x-3">
-                {/* 캘린더 아이콘 클릭 시 12달 선택 화면으로 전환 */}
                 <div
                   onClick={toggleYearlyView}
                   className="p-2.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl cursor-pointer transition active:scale-95"
@@ -314,7 +336,6 @@
                 </div>
 
                 <div>
-                  {/* 월/년 제목 터치 시 12달 선택 화면으로 전환 */}
                   <div
                     onClick={toggleYearlyView}
                     className="cursor-pointer group flex items-center space-x-1.5 hover:opacity-80 transition"
@@ -341,13 +362,13 @@
                 </div>
                 
                 <div className="flex items-center space-x-1 pl-2 sm:pl-4">
-                  <button onClick={handlePrev} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition">
+                  <button onClick={handlePrev} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition active:scale-90">
                     <i className="fa-solid fa-chevron-left text-sm"></i>
                   </button>
-                  <button onClick={goToday} className="px-3 py-1 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md transition">
+                  <button onClick={goToday} className="px-3 py-1 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md transition active:scale-95">
                     오늘
                   </button>
-                  <button onClick={handleNext} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition">
+                  <button onClick={handleNext} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition active:scale-90">
                     <i className="fa-solid fa-chevron-right text-sm"></i>
                   </button>
                 </div>
@@ -356,7 +377,7 @@
               <div className="flex items-center justify-between md:justify-end space-x-3 border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
                 <div className="bg-slate-100 p-1 rounded-xl flex items-center text-xs font-bold">
                   <button
-                    onClick={() => setViewMode('monthly')}
+                    onClick={() => { setSlideDirection('right'); setViewMode('monthly'); }}
                     className={`px-3 py-1.5 rounded-lg transition ${
                       viewMode === 'monthly'
                         ? 'bg-white text-blue-600 shadow-sm'
@@ -366,7 +387,7 @@
                     <i className="fa-regular fa-calendar-days mr-1.5"></i>월간
                   </button>
                   <button
-                    onClick={() => setViewMode('weekly')}
+                    onClick={() => { setSlideDirection('right'); setViewMode('weekly'); }}
                     className={`px-3 py-1.5 rounded-lg transition ${
                       viewMode === 'weekly'
                         ? 'bg-white text-blue-600 shadow-sm'
@@ -379,7 +400,7 @@
 
                 <button
                   onClick={() => setIsSettingsOpen(true)}
-                  className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium rounded-xl transition shadow-sm"
+                  className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium rounded-xl transition shadow-sm active:scale-95"
                 >
                   <i className="fa-solid fa-gear"></i>
                   <span className="hidden sm:inline">패턴 설정</span>
@@ -412,11 +433,12 @@
             )}
           </div>
 
-          {/* 메인 컨텐츠 영역 (스와이프 가능) */}
+          {/* 메인 컨텐츠 영역 (스와이프 + 모션 애니메이션 적용) */}
           <div
+            key={`${viewMode}-${currentDate.getTime()}`}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
-            className="touch-pan-y"
+            className={`touch-pan-y ${slideDirection === 'right' ? 'animate-slide-right' : 'animate-slide-left'}`}
           >
             {/* 1. 월간 (MONTHLY) 뷰 */}
             {viewMode === 'monthly' && (
@@ -566,7 +588,7 @@
 
                           <button
                             onClick={() => setSelectedDateStr(day.dateStr)}
-                            className="w-full py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition flex items-center justify-center space-x-1"
+                            className="w-full py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition flex items-center justify-center space-x-1 active:scale-95"
                           >
                             <i className="fa-solid fa-plus text-[10px]"></i>
                             <span>일정/근무 수정</span>
@@ -598,10 +620,11 @@
                         onClick={() => {
                           const newDate = new Date(currentDate);
                           newDate.setMonth(m);
+                          setSlideDirection('right');
                           setCurrentDate(newDate);
                           setViewMode('monthly');
                         }}
-                        className={`p-4 rounded-2xl border transition flex flex-col items-center justify-center space-y-1 relative ${
+                        className={`p-4 rounded-2xl border transition flex flex-col items-center justify-center space-y-1 relative active:scale-95 ${
                           isCurrentSelected
                             ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105'
                             : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'
@@ -624,14 +647,14 @@
           {/* 모바일 하단 내비게이션 바 */}
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
             <button
-              onClick={() => setViewMode('monthly')}
+              onClick={() => { setSlideDirection('right'); setViewMode('monthly'); }}
               className={`flex flex-col items-center space-y-1 ${viewMode === 'monthly' ? 'text-blue-600 font-bold' : 'text-slate-400'}`}
             >
               <i className="fa-regular fa-calendar-days text-base"></i>
               <span className="text-[10px]">월간 달력</span>
             </button>
             <button
-              onClick={() => setViewMode('weekly')}
+              onClick={() => { setSlideDirection('right'); setViewMode('weekly'); }}
               className={`flex flex-col items-center space-y-1 ${viewMode === 'weekly' ? 'text-blue-600 font-bold' : 'text-slate-400'}`}
             >
               <i className="fa-solid fa-list-check text-base"></i>
