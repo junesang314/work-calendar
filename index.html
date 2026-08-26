@@ -30,24 +30,24 @@
       border-radius: 3px;
     }
 
-    /* 화면 전환 슬라이드 애니메이션 */
+    /* 부드러운 고급 슬라이드 애니메이션 */
     @keyframes slideFromRight {
-      0% { transform: translateX(35px); opacity: 0.2; }
+      0% { transform: translateX(80px); opacity: 0; }
       100% { transform: translateX(0); opacity: 1; }
     }
     @keyframes slideFromLeft {
-      0% { transform: translateX(-35px); opacity: 0.2; }
+      0% { transform: translateX(-80px); opacity: 0; }
       100% { transform: translateX(0); opacity: 1; }
     }
     .animate-slide-right {
-      animation: slideFromRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: slideFromRight 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
     }
     .animate-slide-left {
-      animation: slideFromLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: slideFromLeft 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased min-h-screen pb-20 sm:pb-6 select-none">
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen pb-20 sm:pb-6 select-none overflow-x-hidden">
   <div id="root"></div>
 
   <script type="text/babel">
@@ -165,7 +165,7 @@
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
 
-      // 이전/다음 이동 핸들러 (슬라이드 애니메이션 방향 적용)
+      // 이전/다음 이동 핸들러
       const handlePrev = () => {
         setSlideDirection('left');
         const newDate = new Date(currentDate);
@@ -212,7 +212,7 @@
         const diffX = touchStartX - touchEndX;
         const diffY = touchStartY - touchEndY;
 
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 35) {
           if (diffX > 0) {
             handleNext();
           } else {
@@ -433,7 +433,7 @@
             )}
           </div>
 
-          {/* 메인 컨텐츠 영역 (스와이프 + 모션 애니메이션 적용) */}
+          {/* 메인 컨텐츠 영역 (개선된 부드러운 슬라이드 애니메이션) */}
           <div
             key={`${viewMode}-${currentDate.getTime()}`}
             onTouchStart={handleTouchStart}
