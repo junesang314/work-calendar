@@ -105,13 +105,18 @@
 
     function App() {
       const today = new Date();
+      // 뷰 모드: 'monthly' | 'weekly' | 'yearly'
       const [viewMode, setViewMode] = useState('monthly');
       const [currentDate, setCurrentDate] = useState(new Date());
 
-      // 손가락 추적 터치 드래그 상태
+      // 3패널 스와이프 캐러셀 상태
       const [dragX, setDragX] = useState(0);
       const [isDragging, setIsDragging] = useState(false);
+      const [isAnimating, setIsAnimating] = useState(false);
+      const pendingDirectionRef = useRef(0); // -1: 다음, 1: 이전
+
       const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
+      const containerRef = useRef(null);
 
       const [settings, setSettings] = useState(() => {
         const saved = localStorage.getItem('shift_app_settings');
@@ -143,37 +148,50 @@
         localStorage.setItem('shift_app_events', JSON.stringify(events));
       }, [events]);
 
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-
-      // 이전/다음 이동 핸들러
-      const changePage = (direction) => {
-        const newDate = new Date(currentDate);
+      // 날짜 계산 보조 함수
+      const getRelativeDate = (baseDate, offset) => {
+        const d = new Date(baseDate);
         if (viewMode === 'yearly') {
-          newDate.setFullYear(newDate.getFullYear() + direction);
+          d.setFullYear(d.getFullYear() + offset);
         } else if (viewMode === 'monthly') {
-          newDate.setMonth(newDate.getMonth() + direction);
+          d.setMonth(d.getMonth() + offset);
         } else if (viewMode === 'weekly') {
-          newDate.setDate(newDate.getDate() + (direction * 7));
+          d.setDate(d.getDate() + (offset * 7));
         }
-        setCurrentDate(newDate);
+        return d;
       };
 
-      const handlePrev = () => changePage(-1);
-      const handleNext = () => changePage(1);
+      const prevDate = useMemo(() => getRelativeDate(currentDate, -1), [currentDate, viewMode]);
+      const currDate = currentDate;
+      const nextDate = useMemo(() => getRelativeDate(currentDate, 1), [currentDate, viewMode]);
+
+      // 이전/다음 이동 핸들러 (버튼 클릭 시)
+      const triggerPageChange = (dir) => {
+        if (isAnimating) return;
+        const containerWidth = containerRef.current ? containerRef.current.clientWidth : window.innerWidth;
+        pendingDirectionRef.current = dir;
+        setIsAnimating(true);
+        setDragX(dir === -1 ? -containerWidth : containerWidth);
+      };
+
+      const handlePrev = () => triggerPageChange(1);  // 이전 (오른쪽으로 미는 연출)
+      const handleNext = () => triggerPageChange(-1); // 다음 (왼쪽으로 미는 연출)
 
       const goToday = () => {
         setCurrentDate(new Date());
+        setDragX(0);
       };
 
-      // --- 실시간 손가락 추적 터치 이벤트 ---
+      // --- 실시간 터치 감지 및 물리 트랙 이동 ---
       const handleTouchStart = (e) => {
+        if (isAnimating) return;
         touchStartRef.current = {
           x: e.touches[0].clientX,
           y: e.touches[0].clientY,
           time: Date.now()
         };
         setIsDragging(true);
+        setIsAnimating(false);
       };
 
       const handleTouchMove = (e) => {
@@ -185,7 +203,7 @@
         const deltaX = currentX - touchStartRef.current.x;
         const deltaY = currentY - touchStartRef.current.y;
 
-        // 수평 이동이 수직 스크롤보다 우세할 때 실시간 이동 반영
+        // 수평 스와이프 감지
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
           setDragX(deltaX);
         }
@@ -196,19 +214,44 @@
         setIsDragging(false);
 
         const duration = Date.now() - touchStartRef.current.time;
-        const velocity = Math.abs(dragX) / duration; // 이동 속도 계산
+        const velocity = Math.abs(dragX) / duration;
+        const containerWidth = containerRef.current ? containerRef.current.clientWidth : window.innerWidth;
 
-        // 임계값 판단: 80px 이상 끌었거나, 빠르게 flick(속도 0.3 이상)한 경우
-        if (dragX < -80 || (dragX < -30 && velocity > 0.3)) {
-          changePage(1); // 다음 페이지
-        } else if (dragX > 80 || (dragX > 30 && velocity > 0.3)) {
-          changePage(-1); // 이전 페이지
+        // 60px 이상 끌었거나 빠른 스와이프(velocity > 0.25)
+        if (dragX < -60 || (dragX < -25 && velocity > 0.25)) {
+          // 오른쪽에서 왼쪽으로 스와이프 ➔ 다음달로 이동 (Next 패널이 오른쪽에서 진입)
+          pendingDirectionRef.current = -1;
+          setIsAnimating(true);
+          setDragX(-containerWidth);
+        } else if (dragX > 60 || (dragX > 25 && velocity > 0.25)) {
+          // 왼쪽에서 오른쪽으로 스와이프 ➔ 전달로 이동 (Prev 패널이 왼쪽에서 진입)
+          pendingDirectionRef.current = 1;
+          setIsAnimating(true);
+          setDragX(containerWidth);
+        } else {
+          // 미달 시 제자리 복귀
+          pendingDirectionRef.current = 0;
+          setIsAnimating(true);
+          setDragX(0);
         }
-
-        // 제자리 복귀
-        setDragX(0);
       };
 
+      // 애니메이션 완료 후 실제 날짜 상태 변경 및 스냅 복귀
+      const handleTransitionEnd = () => {
+        if (!isAnimating) return;
+
+        const dir = pendingDirectionRef.current;
+        if (dir !== 0) {
+          setCurrentDate(prev => getRelativeDate(prev, dir === -1 ? 1 : -1));
+        }
+
+        // 애니메이션 없이 즉시 중앙(0) 상태로 스냅 복구
+        setIsAnimating(false);
+        setDragX(0);
+        pendingDirectionRef.current = 0;
+      };
+
+      // 일수 및 스케줄 계산 로직
       const getDayInfo = (d) => {
         const yearStr = d.getFullYear();
         const monthStr = String(d.getMonth() + 1).padStart(2, '0');
@@ -240,9 +283,11 @@
         };
       };
 
-      const monthlyDays = useMemo(() => {
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
+      const getMonthlyDays = (targetDate) => {
+        const y = targetDate.getFullYear();
+        const m = targetDate.getMonth();
+        const firstDay = new Date(y, m, 1);
+        const lastDay = new Date(y, m + 1, 0);
 
         const startDate = new Date(firstDay);
         startDate.setDate(startDate.getDate() - startDate.getDay());
@@ -257,16 +302,16 @@
 
         while (curr <= endDate) {
           const info = getDayInfo(curr);
-          info.isCurrentMonth = curr.getMonth() === month;
+          info.isCurrentMonth = curr.getMonth() === m;
           days.push(info);
           curr.setDate(curr.getDate() + 1);
         }
 
         return days;
-      }, [year, month, settings, overrides, events]);
+      };
 
-      const weeklyDays = useMemo(() => {
-        const startOfWeek = new Date(currentDate);
+      const getWeeklyDays = (targetDate) => {
+        const startOfWeek = new Date(targetDate);
         startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
 
         const days = [];
@@ -280,28 +325,244 @@
         }
 
         return days;
-      }, [currentDate, settings, overrides, events]);
+      };
+
+      const currMonthlyDays = useMemo(() => getMonthlyDays(currDate), [currDate, settings, overrides, events]);
 
       const monthSummary = useMemo(() => {
         const summary = { 당직: 0, 주간: 0, 비번: 0, 연차: 0 };
-        monthlyDays.forEach(day => {
+        currMonthlyDays.forEach(day => {
           if (day.isCurrentMonth) {
             const s = day.shiftInfo.shift;
             if (summary[s] !== undefined) summary[s]++;
           }
         });
         return summary;
-      }, [monthlyDays]);
+      }, [currMonthlyDays]);
 
       const weekRangeText = useMemo(() => {
-        if (weeklyDays.length === 0) return '';
-        const start = weeklyDays[0].dateStr;
-        const end = weeklyDays[6].dateStr;
+        const days = getWeeklyDays(currDate);
+        if (days.length === 0) return '';
+        const start = days[0].dateStr;
+        const end = days[6].dateStr;
         return `${start.replace(/-/g, '.')} ~ ${end.substring(5).replace(/-/g, '.')}`;
-      }, [weeklyDays]);
+      }, [currDate, settings, overrides, events]);
 
       const toggleYearlyView = () => {
         setViewMode(prev => (prev === 'yearly' ? 'monthly' : 'yearly'));
+        setDragX(0);
+      };
+
+      // 패널 렌더링 함수 (월간/위클리/연간)
+      const renderViewContent = (targetDate) => {
+        if (viewMode === 'monthly') {
+          const days = getMonthlyDays(targetDate);
+          return (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="grid grid-cols-7 border-b border-slate-200 text-center bg-slate-50/70 font-semibold text-xs py-3 text-slate-600">
+                <div className="text-red-500">일</div>
+                <div>월</div>
+                <div>화</div>
+                <div>수</div>
+                <div>목</div>
+                <div>금</div>
+                <div className="text-blue-500">토</div>
+              </div>
+
+              <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100">
+                {days.map((day, idx) => {
+                  const isSunday = day.dayOfWeek === 0;
+                  const isSaturday = day.dayOfWeek === 6;
+                  const isHoliday = !!day.holidayName;
+
+                  let dateNumColor = "text-slate-800";
+                  if (!day.isCurrentMonth) {
+                    dateNumColor = "text-slate-300";
+                  } else if (isSunday || isHoliday) {
+                    dateNumColor = "text-red-500";
+                  } else if (isSaturday) {
+                    dateNumColor = "text-blue-500";
+                  }
+
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => setSelectedDateStr(day.dateStr)}
+                      className={`min-h-[150px] p-2 transition cursor-pointer flex flex-col justify-between group hover:bg-slate-50/80 ${
+                        !day.isCurrentMonth ? "bg-slate-50/40" : "bg-white"
+                      } ${day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""}`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <span className={`text-sm font-bold ${dateNumColor}`}>
+                            {day.dayNum}
+                          </span>
+                        </div>
+
+                        {day.holidayName && day.isCurrentMonth && (
+                          <div className="text-[10px] font-semibold text-red-500 truncate leading-tight mt-0.5">
+                            {day.holidayName}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="my-2 flex flex-col items-center justify-center">
+                        <ShiftBadge info={day.shiftInfo} />
+                      </div>
+
+                      <div className="space-y-1 mt-auto max-h-[65px] overflow-y-auto custom-scrollbar pr-0.5">
+                        {day.dayEvents.map((evt) => (
+                          <div
+                            key={evt.id}
+                            className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-1.5 py-1 rounded-md truncate font-medium flex items-center justify-between border border-slate-200/60"
+                          >
+                            <span className="truncate">{evt.title}</span>
+                            {evt.time && <span className="text-[9px] text-slate-400 pl-1 shrink-0">{evt.time}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
+
+        if (viewMode === 'weekly') {
+          const days = getWeeklyDays(targetDate);
+          return (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+                {days.map((day, idx) => {
+                  const isSunday = day.dayOfWeek === 0;
+                  const isSaturday = day.dayOfWeek === 6;
+                  const isHoliday = !!day.holidayName;
+                  const dayNames = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+
+                  let headerBg = "bg-slate-50 text-slate-700";
+                  let dateNumColor = "text-slate-800";
+
+                  if (day.isToday) {
+                    headerBg = "bg-blue-600 text-white";
+                    dateNumColor = "text-white";
+                  } else if (isSunday || isHoliday) {
+                    dateNumColor = "text-red-500";
+                  } else if (isSaturday) {
+                    dateNumColor = "text-blue-500";
+                  }
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`bg-white rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden ${
+                        day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"
+                      }`}
+                    >
+                      <div className={`p-3 border-b flex items-center justify-between ${headerBg}`}>
+                        <div>
+                          <div className="text-xs font-semibold opacity-90">{dayNames[day.dayOfWeek]}</div>
+                          <div className={`text-lg font-bold leading-none ${dateNumColor}`}>
+                            {day.dateStr.substring(5).replace('-', '.')}
+                          </div>
+                        </div>
+                        {day.holidayName && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${day.isToday ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'}`}>
+                            {day.holidayName}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="p-3 flex-1 flex flex-col justify-between space-y-3">
+                        <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-100">
+                          <span className="text-xs font-semibold text-slate-500">오늘의 근무</span>
+                          <ShiftBadge info={day.shiftInfo} />
+                        </div>
+
+                        <div className="space-y-1.5 flex-1 min-h-[100px]">
+                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                            <span>일정 ({day.dayEvents.length})</span>
+                          </div>
+
+                          {day.dayEvents.length > 0 ? (
+                            day.dayEvents.map((evt) => (
+                              <div
+                                key={evt.id}
+                                className="text-xs bg-slate-50 hover:bg-slate-100 text-slate-800 p-2 rounded-xl border border-slate-200/80 space-y-0.5"
+                              >
+                                <div className="font-semibold flex items-center justify-between">
+                                  <span>{evt.title}</span>
+                                  {evt.time && <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">{evt.time}</span>}
+                                </div>
+                                {evt.note && <div className="text-[10px] text-slate-500 leading-tight">{evt.note}</div>}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-[11px] text-slate-300 text-center py-6">
+                              일정 없음
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => setSelectedDateStr(day.dateStr)}
+                          className="w-full py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition flex items-center justify-center space-x-1 active:scale-95"
+                        >
+                          <i className="fa-solid fa-plus text-[10px]"></i>
+                          <span>일정/근무 수정</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
+
+        if (viewMode === 'yearly') {
+          const y = targetDate.getFullYear();
+          return (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+              <div className="text-center mb-4">
+                <h2 className="text-lg font-bold text-slate-800">{y}년 전체 달력 선택</h2>
+                <p className="text-xs text-slate-400">원하는 월을 터치하거나 손가락으로 이어서 연도를 이동하세요.</p>
+              </div>
+
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {Array.from({ length: 12 }, (_, i) => i).map((m) => {
+                  const isCurrentSelected = currDate.getFullYear() === y && currDate.getMonth() === m;
+                  const isThisMonth = today.getFullYear() === y && today.getMonth() === m;
+
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => {
+                        const newDate = new Date(targetDate);
+                        newDate.setMonth(m);
+                        setCurrentDate(newDate);
+                        setViewMode('monthly');
+                        setDragX(0);
+                      }}
+                      className={`p-4 rounded-2xl border transition flex flex-col items-center justify-center space-y-1 relative active:scale-95 ${
+                        isCurrentSelected
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105'
+                          : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      <span className="text-lg font-black">{m + 1}월</span>
+                      {isThisMonth && (
+                        <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${isCurrentSelected ? 'bg-white text-blue-600' : 'bg-blue-100 text-blue-700'}`}>
+                          이번달
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
       };
 
       return (
@@ -327,9 +588,9 @@
                   >
                     <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
                       {viewMode === 'yearly'
-                        ? `${year}년`
+                        ? `${currDate.getFullYear()}년`
                         : viewMode === 'monthly'
-                        ? `${year}년 ${month + 1}월`
+                        ? `${currDate.getFullYear()}년 ${currDate.getMonth() + 1}월`
                         : weekRangeText}
                     </h1>
                     <span className="text-xs text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded-md group-hover:bg-blue-100 transition">
@@ -338,10 +599,10 @@
                   </div>
                   <p className="text-xs text-slate-500 font-medium mt-0.5">
                     {viewMode === 'yearly'
-                      ? '한 해 12달 전체 선택 (손가락으로 끌어서 연도 이동)'
+                      ? '한 해 12달 전체 선택 (좌우 슬라이드로 연도 이동)'
                       : viewMode === 'monthly'
-                      ? '월간 근무 및 일정 (손가락으로 끌어서 월 이동)'
-                      : '주간 상세 스케줄 (손가락으로 끌어서 주 이동)'}
+                      ? '월간 근무 및 일정 (손가락 위치에 맞춰 양방향 연속 이동)'
+                      : '주간 상세 스케줄 (좌우 슬라이드로 주 이동)'}
                   </p>
                 </div>
                 
@@ -361,7 +622,7 @@
               <div className="flex items-center justify-between md:justify-end space-x-3 border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
                 <div className="bg-slate-100 p-1 rounded-xl flex items-center text-xs font-bold">
                   <button
-                    onClick={() => setViewMode('monthly')}
+                    onClick={() => { setViewMode('monthly'); setDragX(0); }}
                     className={`px-3 py-1.5 rounded-lg transition ${
                       viewMode === 'monthly'
                         ? 'bg-white text-blue-600 shadow-sm'
@@ -371,7 +632,7 @@
                     <i className="fa-regular fa-calendar-days mr-1.5"></i>월간
                   </button>
                   <button
-                    onClick={() => setViewMode('weekly')}
+                    onClick={() => { setViewMode('weekly'); setDragX(0); }}
                     className={`px-3 py-1.5 rounded-lg transition ${
                       viewMode === 'weekly'
                         ? 'bg-white text-blue-600 shadow-sm'
@@ -417,231 +678,51 @@
             )}
           </div>
 
-          {/* 메인 컨텐츠 영역 (실시간 손가락 추적 + 드래그 반응형 모션) */}
+          {/* 3패널 연속 트랙 캐러셀 (실시간 양방향 드래그 연결) */}
           <div
+            ref={containerRef}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            style={{
-              transform: `translateX(${dragX}px)`,
-              transition: isDragging ? 'none' : 'transform 0.3s ease-out'
-            }}
-            className="touch-pan-y"
+            className="overflow-hidden w-full relative touch-pan-y"
           >
-            {/* 1. 월간 (MONTHLY) 뷰 */}
-            {viewMode === 'monthly' && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="grid grid-cols-7 border-b border-slate-200 text-center bg-slate-50/70 font-semibold text-xs py-3 text-slate-600">
-                  <div className="text-red-500">일</div>
-                  <div>월</div>
-                  <div>화</div>
-                  <div>수</div>
-                  <div>목</div>
-                  <div>금</div>
-                  <div className="text-blue-500">토</div>
-                </div>
-
-                <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100">
-                  {monthlyDays.map((day, idx) => {
-                    const isSunday = day.dayOfWeek === 0;
-                    const isSaturday = day.dayOfWeek === 6;
-                    const isHoliday = !!day.holidayName;
-
-                    let dateNumColor = "text-slate-800";
-                    if (!day.isCurrentMonth) {
-                      dateNumColor = "text-slate-300";
-                    } else if (isSunday || isHoliday) {
-                      dateNumColor = "text-red-500";
-                    } else if (isSaturday) {
-                      dateNumColor = "text-blue-500";
-                    }
-
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => setSelectedDateStr(day.dateStr)}
-                        className={`min-h-[150px] p-2 transition cursor-pointer flex flex-col justify-between group hover:bg-slate-50/80 ${
-                          !day.isCurrentMonth ? "bg-slate-50/40" : "bg-white"
-                        } ${day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""}`}
-                      >
-                        <div>
-                          <div className="flex items-start justify-between">
-                            <span className={`text-sm font-bold ${dateNumColor}`}>
-                              {day.dayNum}
-                            </span>
-                          </div>
-
-                          {day.holidayName && day.isCurrentMonth && (
-                            <div className="text-[10px] font-semibold text-red-500 truncate leading-tight mt-0.5">
-                              {day.holidayName}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="my-2 flex flex-col items-center justify-center">
-                          <ShiftBadge info={day.shiftInfo} />
-                        </div>
-
-                        <div className="space-y-1 mt-auto max-h-[65px] overflow-y-auto custom-scrollbar pr-0.5">
-                          {day.dayEvents.map((evt) => (
-                            <div
-                              key={evt.id}
-                              className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-1.5 py-1 rounded-md truncate font-medium flex items-center justify-between border border-slate-200/60"
-                            >
-                              <span className="truncate">{evt.title}</span>
-                              {evt.time && <span className="text-[9px] text-slate-400 pl-1 shrink-0">{evt.time}</span>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+            <div
+              onTransitionEnd={handleTransitionEnd}
+              style={{
+                display: 'flex',
+                width: '300%',
+                transform: `translateX(calc(-33.333333% + ${dragX}px))`,
+                transition: isAnimating ? 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)' : 'none'
+              }}
+            >
+              {/* 1번 패널: 전달 (왼쪽 패널 -> 오른쪽 스와이프 시 화면으로 진입) */}
+              <div className="w-1/3 shrink-0 px-0.5">
+                {renderViewContent(prevDate)}
               </div>
-            )}
 
-            {/* 2. 위클리 (WEEKLY) 뷰 */}
-            {viewMode === 'weekly' && (
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-                  {weeklyDays.map((day, idx) => {
-                    const isSunday = day.dayOfWeek === 0;
-                    const isSaturday = day.dayOfWeek === 6;
-                    const isHoliday = !!day.holidayName;
-                    const dayNames = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
-
-                    let headerBg = "bg-slate-50 text-slate-700";
-                    let dateNumColor = "text-slate-800";
-
-                    if (day.isToday) {
-                      headerBg = "bg-blue-600 text-white";
-                      dateNumColor = "text-white";
-                    } else if (isSunday || isHoliday) {
-                      dateNumColor = "text-red-500";
-                    } else if (isSaturday) {
-                      dateNumColor = "text-blue-500";
-                    }
-
-                    return (
-                      <div
-                        key={idx}
-                        className={`bg-white rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden ${
-                          day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"
-                        }`}
-                      >
-                        <div className={`p-3 border-b flex items-center justify-between ${headerBg}`}>
-                          <div>
-                            <div className="text-xs font-semibold opacity-90">{dayNames[day.dayOfWeek]}</div>
-                            <div className={`text-lg font-bold leading-none ${dateNumColor}`}>
-                              {day.dateStr.substring(5).replace('-', '.')}
-                            </div>
-                          </div>
-                          {day.holidayName && (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${day.isToday ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'}`}>
-                              {day.holidayName}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="p-3 flex-1 flex flex-col justify-between space-y-3">
-                          <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-100">
-                            <span className="text-xs font-semibold text-slate-500">오늘의 근무</span>
-                            <ShiftBadge info={day.shiftInfo} />
-                          </div>
-
-                          <div className="space-y-1.5 flex-1 min-h-[100px]">
-                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
-                              <span>일정 ({day.dayEvents.length})</span>
-                            </div>
-
-                            {day.dayEvents.length > 0 ? (
-                              day.dayEvents.map((evt) => (
-                                <div
-                                  key={evt.id}
-                                  className="text-xs bg-slate-50 hover:bg-slate-100 text-slate-800 p-2 rounded-xl border border-slate-200/80 space-y-0.5"
-                                >
-                                  <div className="font-semibold flex items-center justify-between">
-                                    <span>{evt.title}</span>
-                                    {evt.time && <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">{evt.time}</span>}
-                                  </div>
-                                  {evt.note && <div className="text-[10px] text-slate-500 leading-tight">{evt.note}</div>}
-                                </div>
-                              ))
-                            ) : (
-                              <div className="text-[11px] text-slate-300 text-center py-6">
-                                일정 없음
-                              </div>
-                            )}
-                          </div>
-
-                          <button
-                            onClick={() => setSelectedDateStr(day.dateStr)}
-                            className="w-full py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition flex items-center justify-center space-x-1 active:scale-95"
-                          >
-                            <i className="fa-solid fa-plus text-[10px]"></i>
-                            <span>일정/근무 수정</span>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* 2번 패널: 현재달 (중앙 패널) */}
+              <div className="w-1/3 shrink-0 px-0.5">
+                {renderViewContent(currDate)}
               </div>
-            )}
 
-            {/* 3. 연간 12달 (YEARLY) 선택 뷰 */}
-            {viewMode === 'yearly' && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-                <div className="text-center mb-4">
-                  <h2 className="text-lg font-bold text-slate-800">{year}년 전체 달력 선택</h2>
-                  <p className="text-xs text-slate-400">원하는 월을 터치하거나 손가락으로 끌어 연도를 이동하세요.</p>
-                </div>
-
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                  {Array.from({ length: 12 }, (_, i) => i).map((m) => {
-                    const isCurrentSelected = month === m;
-                    const isThisMonth = today.getFullYear() === year && today.getMonth() === m;
-
-                    return (
-                      <button
-                        key={m}
-                        onClick={() => {
-                          const newDate = new Date(currentDate);
-                          newDate.setMonth(m);
-                          setCurrentDate(newDate);
-                          setViewMode('monthly');
-                        }}
-                        className={`p-4 rounded-2xl border transition flex flex-col items-center justify-center space-y-1 relative active:scale-95 ${
-                          isCurrentSelected
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105'
-                            : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'
-                        }`}
-                      >
-                        <span className="text-lg font-black">{m + 1}월</span>
-                        {isThisMonth && (
-                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${isCurrentSelected ? 'bg-white text-blue-600' : 'bg-blue-100 text-blue-700'}`}>
-                            이번달
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+              {/* 3번 패널: 다음달 (오른쪽 패널 -> 왼쪽 스와이프 시 화면으로 진입) */}
+              <div className="w-1/3 shrink-0 px-0.5">
+                {renderViewContent(nextDate)}
               </div>
-            )}
+            </div>
           </div>
 
           {/* 모바일 하단 내비게이션 바 */}
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
             <button
-              onClick={() => setViewMode('monthly')}
+              onClick={() => { setViewMode('monthly'); setDragX(0); }}
               className={`flex flex-col items-center space-y-1 ${viewMode === 'monthly' ? 'text-blue-600 font-bold' : 'text-slate-400'}`}
             >
               <i className="fa-regular fa-calendar-days text-base"></i>
               <span className="text-[10px]">월간 달력</span>
             </button>
             <button
-              onClick={() => setViewMode('weekly')}
+              onClick={() => { setViewMode('weekly'); setDragX(0); }}
               className={`flex flex-col items-center space-y-1 ${viewMode === 'weekly' ? 'text-blue-600 font-bold' : 'text-slate-400'}`}
             >
               <i className="fa-solid fa-list-check text-base"></i>
