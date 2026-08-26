@@ -29,29 +29,13 @@
       background: #cbd5e1;
       border-radius: 3px;
     }
-
-    /* 부드러운 고급 슬라이드 애니메이션 */
-    @keyframes slideFromRight {
-      0% { transform: translateX(80px); opacity: 0; }
-      100% { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes slideFromLeft {
-      0% { transform: translateX(-80px); opacity: 0; }
-      100% { transform: translateX(0); opacity: 1; }
-    }
-    .animate-slide-right {
-      animation: slideFromRight 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-    }
-    .animate-slide-left {
-      animation: slideFromLeft 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen pb-20 sm:pb-6 select-none overflow-x-hidden">
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useMemo } = React;
+    const { useState, useEffect, useMemo, useRef } = React;
 
     // --- 한국 공휴일 데이터 ---
     const HOLIDAYS_DATA = {
@@ -121,16 +105,13 @@
 
     function App() {
       const today = new Date();
-      // 뷰 모드: 'monthly' | 'weekly' | 'yearly'
       const [viewMode, setViewMode] = useState('monthly');
       const [currentDate, setCurrentDate] = useState(new Date());
 
-      // 이동 애니메이션 방향 상태 ('right' | 'left')
-      const [slideDirection, setSlideDirection] = useState('right');
-
-      // 터치 스와이프 감지용 상태
-      const [touchStartX, setTouchStartX] = useState(null);
-      const [touchStartY, setTouchStartY] = useState(null);
+      // 손가락 추적 터치 드래그 상태
+      const [dragX, setDragX] = useState(0);
+      const [isDragging, setIsDragging] = useState(false);
+      const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
 
       const [settings, setSettings] = useState(() => {
         const saved = localStorage.getItem('shift_app_settings');
@@ -166,62 +147,66 @@
       const month = currentDate.getMonth();
 
       // 이전/다음 이동 핸들러
-      const handlePrev = () => {
-        setSlideDirection('left');
+      const changePage = (direction) => {
         const newDate = new Date(currentDate);
         if (viewMode === 'yearly') {
-          newDate.setFullYear(newDate.getFullYear() - 1);
+          newDate.setFullYear(newDate.getFullYear() + direction);
         } else if (viewMode === 'monthly') {
-          newDate.setMonth(newDate.getMonth() - 1);
+          newDate.setMonth(newDate.getMonth() + direction);
         } else if (viewMode === 'weekly') {
-          newDate.setDate(newDate.getDate() - 7);
+          newDate.setDate(newDate.getDate() + (direction * 7));
         }
         setCurrentDate(newDate);
       };
 
-      const handleNext = () => {
-        setSlideDirection('right');
-        const newDate = new Date(currentDate);
-        if (viewMode === 'yearly') {
-          newDate.setFullYear(newDate.getFullYear() + 1);
-        } else if (viewMode === 'monthly') {
-          newDate.setMonth(newDate.getMonth() + 1);
-        } else if (viewMode === 'weekly') {
-          newDate.setDate(newDate.getDate() + 7);
-        }
-        setCurrentDate(newDate);
-      };
+      const handlePrev = () => changePage(-1);
+      const handleNext = () => changePage(1);
 
       const goToday = () => {
-        setSlideDirection('right');
         setCurrentDate(new Date());
       };
 
-      // --- 터치 스와이프 이벤트 처리 ---
+      // --- 실시간 손가락 추적 터치 이벤트 ---
       const handleTouchStart = (e) => {
-        setTouchStartX(e.touches[0].clientX);
-        setTouchStartY(e.touches[0].clientY);
+        touchStartRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+          time: Date.now()
+        };
+        setIsDragging(true);
       };
 
-      const handleTouchEnd = (e) => {
-        if (touchStartX === null || touchStartY === null) return;
+      const handleTouchMove = (e) => {
+        if (!isDragging) return;
 
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
 
-        const diffX = touchStartX - touchEndX;
-        const diffY = touchStartY - touchEndY;
+        const deltaX = currentX - touchStartRef.current.x;
+        const deltaY = currentY - touchStartRef.current.y;
 
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 35) {
-          if (diffX > 0) {
-            handleNext();
-          } else {
-            handlePrev();
-          }
+        // 수평 이동이 수직 스크롤보다 우세할 때 실시간 이동 반영
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+          setDragX(deltaX);
+        }
+      };
+
+      const handleTouchEnd = () => {
+        if (!isDragging) return;
+        setIsDragging(false);
+
+        const duration = Date.now() - touchStartRef.current.time;
+        const velocity = Math.abs(dragX) / duration; // 이동 속도 계산
+
+        // 임계값 판단: 80px 이상 끌었거나, 빠르게 flick(속도 0.3 이상)한 경우
+        if (dragX < -80 || (dragX < -30 && velocity > 0.3)) {
+          changePage(1); // 다음 페이지
+        } else if (dragX > 80 || (dragX > 30 && velocity > 0.3)) {
+          changePage(-1); // 이전 페이지
         }
 
-        setTouchStartX(null);
-        setTouchStartY(null);
+        // 제자리 복귀
+        setDragX(0);
       };
 
       const getDayInfo = (d) => {
@@ -316,7 +301,6 @@
       }, [weeklyDays]);
 
       const toggleYearlyView = () => {
-        setSlideDirection('right');
         setViewMode(prev => (prev === 'yearly' ? 'monthly' : 'yearly'));
       };
 
@@ -354,10 +338,10 @@
                   </div>
                   <p className="text-xs text-slate-500 font-medium mt-0.5">
                     {viewMode === 'yearly'
-                      ? '한 해 12달 전체 선택 (좌우 스와이프 연도 이동)'
+                      ? '한 해 12달 전체 선택 (손가락으로 끌어서 연도 이동)'
                       : viewMode === 'monthly'
-                      ? '월간 근무 및 일정 (좌우 스와이프 월 이동)'
-                      : '주간 상세 스케줄 (좌우 스와이프 주 이동)'}
+                      ? '월간 근무 및 일정 (손가락으로 끌어서 월 이동)'
+                      : '주간 상세 스케줄 (손가락으로 끌어서 주 이동)'}
                   </p>
                 </div>
                 
@@ -377,7 +361,7 @@
               <div className="flex items-center justify-between md:justify-end space-x-3 border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
                 <div className="bg-slate-100 p-1 rounded-xl flex items-center text-xs font-bold">
                   <button
-                    onClick={() => { setSlideDirection('right'); setViewMode('monthly'); }}
+                    onClick={() => setViewMode('monthly')}
                     className={`px-3 py-1.5 rounded-lg transition ${
                       viewMode === 'monthly'
                         ? 'bg-white text-blue-600 shadow-sm'
@@ -387,7 +371,7 @@
                     <i className="fa-regular fa-calendar-days mr-1.5"></i>월간
                   </button>
                   <button
-                    onClick={() => { setSlideDirection('right'); setViewMode('weekly'); }}
+                    onClick={() => setViewMode('weekly')}
                     className={`px-3 py-1.5 rounded-lg transition ${
                       viewMode === 'weekly'
                         ? 'bg-white text-blue-600 shadow-sm'
@@ -433,12 +417,16 @@
             )}
           </div>
 
-          {/* 메인 컨텐츠 영역 (개선된 부드러운 슬라이드 애니메이션) */}
+          {/* 메인 컨텐츠 영역 (실시간 손가락 추적 + 드래그 반응형 모션) */}
           <div
-            key={`${viewMode}-${currentDate.getTime()}`}
             onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            className={`touch-pan-y ${slideDirection === 'right' ? 'animate-slide-right' : 'animate-slide-left'}`}
+            style={{
+              transform: `translateX(${dragX}px)`,
+              transition: isDragging ? 'none' : 'transform 0.3s ease-out'
+            }}
+            className="touch-pan-y"
           >
             {/* 1. 월간 (MONTHLY) 뷰 */}
             {viewMode === 'monthly' && (
@@ -606,7 +594,7 @@
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
                 <div className="text-center mb-4">
                   <h2 className="text-lg font-bold text-slate-800">{year}년 전체 달력 선택</h2>
-                  <p className="text-xs text-slate-400">원하는 월을 터치하거나 화면을 좌우로 스와이프하여 연도를 이동하세요.</p>
+                  <p className="text-xs text-slate-400">원하는 월을 터치하거나 손가락으로 끌어 연도를 이동하세요.</p>
                 </div>
 
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
@@ -620,7 +608,6 @@
                         onClick={() => {
                           const newDate = new Date(currentDate);
                           newDate.setMonth(m);
-                          setSlideDirection('right');
                           setCurrentDate(newDate);
                           setViewMode('monthly');
                         }}
@@ -647,14 +634,14 @@
           {/* 모바일 하단 내비게이션 바 */}
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
             <button
-              onClick={() => { setSlideDirection('right'); setViewMode('monthly'); }}
+              onClick={() => setViewMode('monthly')}
               className={`flex flex-col items-center space-y-1 ${viewMode === 'monthly' ? 'text-blue-600 font-bold' : 'text-slate-400'}`}
             >
               <i className="fa-regular fa-calendar-days text-base"></i>
               <span className="text-[10px]">월간 달력</span>
             </button>
             <button
-              onClick={() => { setSlideDirection('right'); setViewMode('weekly'); }}
+              onClick={() => setViewMode('weekly')}
               className={`flex flex-col items-center space-y-1 ${viewMode === 'weekly' ? 'text-blue-600 font-bold' : 'text-slate-400'}`}
             >
               <i className="fa-solid fa-list-check text-base"></i>
