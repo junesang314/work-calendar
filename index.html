@@ -523,7 +523,7 @@
                       onMouseDown={() => handleCellTouchStart(day)}
                       onMouseUp={handleCellTouchEnd}
                       onClick={() => handleCellClick(day)}
-                      className={`min-h-[96px] sm:min-h-[110px] p-1.5 transition cursor-pointer flex flex-col justify-between group hover:brightness-95 active:scale-[0.99] ${cellBgStyle} ${
+                      className={`min-h-[115px] sm:min-h-[135px] p-1.5 sm:p-2 transition cursor-pointer flex flex-col justify-between group hover:brightness-95 active:scale-[0.99] ${cellBgStyle} ${
                         day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""
                       }`}
                     >
@@ -560,18 +560,18 @@
                       </div>
 
                       {/* 등록된 일정 목록 */}
-                      <div className="space-y-0.5 mt-auto max-h-[38px] overflow-hidden">
+                      <div className="space-y-0.5 mt-auto max-h-[42px] overflow-hidden">
                         {day.dayEvents.slice(0, 1).map((evt) => (
                           <div
                             key={evt.id}
-                            className={`text-[9px] px-1 py-0.2 rounded truncate font-semibold flex items-center justify-between shadow-2xs border ${
+                            className={`text-[9.5px] px-1 py-0.5 rounded truncate font-semibold flex items-center justify-between shadow-2xs border ${
                               day.isWorkout 
                                 ? "bg-white/95 text-slate-900 border-blue-200" 
                                 : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200/80"
                             }`}
                           >
                             <span className="truncate">{evt.title}</span>
-                            {evt.time && <span className={`text-[8px] pl-1 shrink-0 font-bold ${
+                            {evt.time && <span className={`text-[8.5px] pl-1 shrink-0 font-bold ${
                               day.isWorkout ? 'text-blue-800' : 'text-emerald-700'
                             }`}>{evt.time}</span>}
                           </div>
@@ -929,8 +929,8 @@
             </div>
           </div>
 
-          {/* 🏃🏋️ 하단 와이드 운동 기록 통계 카드 (달력 바로 아래 컴팩트 연결) */}
-          <div className="mt-3 bg-white rounded-2xl p-3 sm:p-4 shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2.5 select-none">
+          {/* 🏃🏋️ 하단 와이드 운동 기록 통계 카드 (총운동 칸 줄이고 크로스핏 칸 늘림) */}
+          <div className="mt-2.5 bg-white rounded-2xl p-3 sm:p-3.5 shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 select-none">
             <div className="flex items-center space-x-2.5 w-full sm:w-auto">
               <div className="w-9 h-9 rounded-xl bg-[#1e3a8a] text-white flex items-center justify-center text-base shadow-xs shrink-0">
                 💪
@@ -940,33 +940,30 @@
                   <span>이번 달 운동 통계</span>
                   <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.2 rounded-full font-bold">Total {monthSummary.총운동}회</span>
                 </div>
-                <div className="text-[10.5px] text-slate-400">달리기와 크로스핏 기록 요약</div>
+                <div className="text-[10px] text-slate-400">달리기와 크로스핏 기록 요약</div>
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 w-full sm:w-auto">
-              <div className="flex items-center space-x-1.5 bg-blue-50/80 text-blue-900 px-3 py-1.5 rounded-xl border border-blue-100 text-xs font-bold flex-1 sm:flex-none justify-center">
+            <div className="flex items-center space-x-1.5 w-full sm:w-auto">
+              <div className="flex items-center space-x-1 bg-blue-50/80 text-blue-900 px-2.5 py-1.5 rounded-xl border border-blue-100 text-xs font-bold flex-1 sm:flex-none justify-center">
                 <span>🏃 달리기</span>
-                <span className="text-blue-600 font-extrabold text-sm">{monthSummary.달리기}</span>
-                <span className="text-[10px] font-normal text-slate-400">회</span>
+                <span className="text-blue-600 font-extrabold text-sm pl-0.5">{monthSummary.달리기}</span>
               </div>
-              <div className="flex items-center space-x-1.5 bg-indigo-50/80 text-indigo-900 px-3 py-1.5 rounded-xl border border-indigo-100 text-xs font-bold flex-1 sm:flex-none justify-center">
+              <div className="flex items-center space-x-1 bg-indigo-50/80 text-indigo-900 px-3 py-1.5 rounded-xl border border-indigo-100 text-xs font-bold flex-[1.4] sm:flex-none justify-center">
                 <span>🏋️ 크로스핏</span>
-                <span className="text-indigo-600 font-extrabold text-sm">{monthSummary.크로스핏}</span>
-                <span className="text-[10px] font-normal text-slate-400">회</span>
+                <span className="text-indigo-600 font-extrabold text-sm pl-0.5">{monthSummary.크로스핏}</span>
               </div>
-              <div className="flex items-center space-x-1.5 bg-[#1e3a8a] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-xs flex-1 sm:flex-none justify-center">
+              <div className="flex items-center space-x-1 bg-[#1e3a8a] text-white px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-xs flex-1 sm:flex-none justify-center">
                 <span>총 운동</span>
-                <span className="text-blue-200 font-black text-sm">{monthSummary.총운동}</span>
-                <span className="text-[10px] font-normal text-blue-200/80">회</span>
+                <span className="text-blue-200 font-black text-sm pl-0.5">{monthSummary.총운동}</span>
               </div>
             </div>
           </div>
 
           {/* 📌 하단 버전 표시 */}
-          <div className="mt-3 mb-2 text-center select-none">
+          <div className="mt-2.5 mb-2 text-center select-none">
             <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">
-              근무표 v1.5.1
+              근무표 v1.5.2
             </span>
           </div>
 
@@ -1010,7 +1007,7 @@
             />
           )}
 
-          {/* 📌 상세 일정/근무 수정 모달 (100% 렌더링 보장 & 모바일 완벽 최적화) */}
+          {/* 상세 일정/근무 수정 모달 */}
           {selectedDateStr && (
             <DateDetailModal
               dateStr={selectedDateStr}
@@ -1594,7 +1591,7 @@
       );
     }
 
-    // --- 📌 날짜 상세 모달 (100% 가독성 & 모바일 스크롤 완벽 보장) ---
+    // --- 📌 날짜 상세 모달 ---
     function DateDetailModal({
       dateStr,
       workoutInfo,
