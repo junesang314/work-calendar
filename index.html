@@ -671,7 +671,7 @@
                                   <span>{evt.title}</span>
                                   {evt.time && <span className="text-[10px] text-emerald-700 font-bold bg-white/80 px-1.5 py-0.5 rounded border border-emerald-200/60">{evt.time}</span>}
                                 </div>
-                                {evt.note && <div className="text-[10px] text-emerald-700/80 leading-tight">{evt.note}</div>}
+                                {evt.note && <div className="text-[11px] text-emerald-800/80 leading-tight">{evt.note}</div>}
                               </div>
                             ))
                           ) : (
@@ -954,18 +954,11 @@
             </button>
           </div>
 
-          <div className="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center space-x-4">
-              <span className="font-semibold text-slate-700">근무/운동 범례:</span>
-              <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-blue-600 rounded-full inline-block"></span><span>당직</span></span>
-              <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-amber-400 rounded-full inline-block"></span><span>주간</span></span>
-              <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-rose-50 border border-rose-200 text-rose-600 font-bold text-[9px] rounded-full flex items-center justify-center inline-block">비</span><span>비번</span></span>
-              <span className="flex items-center space-x-1"><span className="w-4 h-4 bg-[#1e3a8a] text-white rounded-md inline-flex items-center justify-center text-[10px]">🏃</span><span>달리기 완료</span></span>
-              <span className="flex items-center space-x-1"><span className="w-4 h-4 bg-[#1e3a8a] text-white rounded-md inline-flex items-center justify-center text-[10px]">🏋️</span><span>크로스핏 완료</span></span>
-            </div>
-            <div className="text-slate-400 text-[11px]">
-              * 상단 연월 제목({currDate.getFullYear()}년 {currDate.getMonth() + 1}월)을 길게 누르면 캡처/공유 창이 열립니다.
-            </div>
+          {/* 📌 하단 버전 표시 (기존 범례 영역 제거) */}
+          <div className="mt-8 mb-4 text-center select-none">
+            <span className="text-[11px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-1 rounded-full border border-slate-200/60">
+              근무표 v1.2.0
+            </span>
           </div>
 
           {/* 롱프레스 간략 팝업 모달 */}
@@ -1094,7 +1087,7 @@
       );
     }
 
-    // --- 📷 한눈에 보기 / 캡처 및 공유 전용 모달 (군더더기 없는 초슬림 카드) ---
+    // --- 📷 한눈에 보기 / 캡처 및 공유 전용 모달 ---
     function ShareCaptureModal({ currDate, monthlyDays, monthSummary, onClose }) {
       const [shareTab, setShareTab] = useState('calendar'); // 'calendar' | 'list'
       const [copySuccess, setCopySuccess] = useState(false);
@@ -1174,7 +1167,7 @@
               </div>
             </div>
 
-            {/* 메인 캡처 프레임 영역 (불필요한 범례 및 하단 바 완전 삭제) */}
+            {/* 메인 캡처 프레임 영역 */}
             <div className="p-3 sm:p-4 overflow-y-auto custom-scrollbar">
               
               {shareTab === 'calendar' ? (
@@ -1799,4 +1792,3 @@
   </script>
 </body>
 </html>
-print("Clean ultra-minimalist capture modal updated successfully!")
