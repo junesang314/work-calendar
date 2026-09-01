@@ -38,6 +38,19 @@
       background: #cbd5e1;
       border-radius: 3px;
     }
+    /* 캡처 시 글자 잘림 방지용 고정 배지 스타일 */
+    .capture-badge {
+      display: inline-block;
+      text-align: center;
+      line-height: 18px;
+      height: 18px;
+      padding: 0 6px;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 4px;
+      box-sizing: border-box;
+      vertical-align: middle;
+    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen pb-20 sm:pb-6 select-none overflow-x-hidden">
@@ -959,7 +972,7 @@
           {/* 📌 하단 버전 표시 */}
           <div className="mt-8 mb-4 text-center select-none">
             <span className="text-[11px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-1 rounded-full border border-slate-200/60">
-              근무표 v1.3.0
+              근무표 v1.3.1
             </span>
           </div>
 
@@ -1099,17 +1112,33 @@
       const year = currDate.getFullYear();
       const month = currDate.getMonth() + 1;
 
-      // 🖼️ 달력 카드 영역만 크롭해서 고화질 이미지로 즉시 저장/공유하는 함수
+      // 🖼️ 달력 카드 영역만 크롭해서 고화질 이미지로 즉시 저장/공유하는 함수 (html2canvas 폰트 렌더링 최적화)
       const handleSaveCroppedImage = async () => {
         if (!cardRef.current || isGenerating) return;
         setIsGenerating(true);
 
         try {
+          // 웹 폰트 로딩 대기
+          if (document.fonts && document.fonts.ready) {
+            await document.fonts.ready;
+          }
+
           const canvas = await html2canvas(cardRef.current, {
-            scale: 2.5, // 고화질 렌더링
+            scale: 2.5,
             useCORS: true,
             backgroundColor: '#ffffff',
-            logging: false
+            logging: false,
+            onclone: (clonedDoc) => {
+              // 복제된 DOM에서 캡처용 글자 높이/패딩 강제 안정화
+              const badges = clonedDoc.querySelectorAll('.capture-badge');
+              badges.forEach(b => {
+                b.style.display = 'inline-block';
+                b.style.lineHeight = '18px';
+                b.style.height = '18px';
+                b.style.paddingTop = '0px';
+                b.style.paddingBottom = '0px';
+              });
+            }
           });
 
           canvas.toBlob(async (blob) => {
@@ -1121,7 +1150,6 @@
             const fileName = `${year}년_${month}월_근무표.png`;
             const file = new File([blob], fileName, { type: 'image/png' });
 
-            // 1. 모바일 브라우저 네이티브 공유창 (아이폰 사진첩 저장, 카카오톡 즉시 전송 등 지원)
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
               try {
                 await navigator.share({
@@ -1129,16 +1157,15 @@
                   title: `${year}년 ${month}월 근무표`
                 });
               } catch (err) {
-                // 사용자가 공유창을 취소한 경우 무시
+                // 취소 시 무시
               }
             } else {
-              // 2. PC 또는 미지원 브라우저: 자동 다운로드
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
               a.download = fileName;
               document.body.appendChild(a);
-              a.click();
+              a.click;
               document.body.removeChild(a);
               URL.revokeObjectURL(url);
             }
@@ -1249,7 +1276,7 @@
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                     <div>
                       <h4 className="text-base font-black text-slate-900">{year}년 {month}월 스케줄</h4>
-                      <p className="text-[10px] text-slate-400 mt-0.2">당직 {monthSummary.당직}회 · 주간 {monthSummary.주간}회 · 비번 {monthSummary.비번}회 · 운동 {monthSummary.총운동}회</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">당직 {monthSummary.당직}회 · 주간 {monthSummary.주간}회 · 비번 {monthSummary.비번}회 · 운동 {monthSummary.총운동}회</p>
                     </div>
                     <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md border border-indigo-100">
                       근무표
@@ -1280,16 +1307,24 @@
                         else if (isSunday || isHoliday) numColor = "text-red-500 font-bold";
                         else if (isSaturday) numColor = "text-blue-500 font-bold";
 
-                        // 근무 미니 배지 색상
-                        let shiftBadgeBg = "bg-slate-100 text-slate-700";
-                        if (shift === '당직') shiftBadgeBg = "bg-blue-600 text-white";
-                        if (shift === '주간') shiftBadgeBg = "bg-amber-400 text-slate-900";
-                        if (shift === '비번') shiftBadgeBg = day.isWorkout ? "bg-rose-100 text-rose-800" : "bg-rose-50 text-rose-600 border border-rose-200";
+                        // 근무 배지 스타일: 캡처 시 하단 잘림 방지용 고정 높이/줄간격 인라인 스타일 적용
+                        let shiftBadgeStyle = {};
+                        if (shift === '당직') {
+                          shiftBadgeStyle = { backgroundColor: '#2563eb', color: '#ffffff' };
+                        } else if (shift === '주간') {
+                          shiftBadgeStyle = { backgroundColor: '#fbbf24', color: '#0f172a' };
+                        } else if (shift === '비번') {
+                          shiftBadgeStyle = day.isWorkout 
+                            ? { backgroundColor: '#ffe4e6', color: '#9f1239' } 
+                            : { backgroundColor: '#fff1f2', color: '#e11d48', border: '1px solid #fecdd3' };
+                        } else {
+                          shiftBadgeStyle = { backgroundColor: '#f1f5f9', color: '#334155' };
+                        }
 
                         return (
                           <div
                             key={idx}
-                            className={`min-h-[64px] p-1 flex flex-col justify-between ${
+                            className={`min-h-[66px] p-1 flex flex-col justify-between ${
                               !day.isCurrentMonth 
                                 ? 'bg-slate-50/50' 
                                 : day.isWorkout 
@@ -1300,13 +1335,16 @@
                             <div className="flex items-center justify-between leading-none">
                               <span className={`text-[10px] ${numColor}`}>{day.dayNum}</span>
                               {day.workoutInfo && day.isCurrentMonth && (
-                                <span className="text-[9px]">{day.workoutInfo.icon}</span>
+                                <span className="text-[9px] leading-none">{day.workoutInfo.icon}</span>
                               )}
                             </div>
 
-                            {/* 근무 텍스트 배지 */}
-                            <div className="my-0.5 flex justify-center">
-                              <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold leading-tight ${shiftBadgeBg}`}>
+                            {/* 📌 근무 텍스트 배지 (글자 잘림 없는 고정 렌더링) */}
+                            <div className="my-1 flex items-center justify-center">
+                              <span 
+                                className="capture-badge"
+                                style={shiftBadgeStyle}
+                              >
                                 {shift}
                               </span>
                             </div>
@@ -1316,7 +1354,7 @@
                               {day.dayEvents.slice(0, 1).map((evt) => (
                                 <div 
                                   key={evt.id} 
-                                  className={`text-[8px] px-1 py-0.2 rounded truncate font-medium ${
+                                  className={`text-[8px] px-1 py-0.5 rounded truncate font-medium ${
                                     day.isWorkout ? 'bg-white/95 text-slate-900' : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
                                   }`}
                                 >
