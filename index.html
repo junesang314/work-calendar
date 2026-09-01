@@ -7,9 +7,9 @@
 
   <!-- 앱 아이콘 및 파비콘 설정 -->
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <link rel="apple-touch-icon" href="icon.png">
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="shortcut icon" href="icon.png">
+  <meta name="apple-mobile-web-app-title" content="근무표">
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -110,6 +110,15 @@
       };
     }
 
+    // 운동 정보 판별 함수
+    function getWorkoutInfo(val) {
+      if (!val) return null;
+      if (val === 'crossfit' || val === '크로스핏') {
+        return { type: 'crossfit', label: '크로스핏', icon: '🏋️' };
+      }
+      return { type: 'running', label: '달리기', icon: '🏃' };
+    }
+
     function App() {
       const today = new Date();
       // 뷰 모드: 'monthly' | 'weekly' | 'yearly'
@@ -145,7 +154,7 @@
         return saved ? JSON.parse(saved) : {};
       });
 
-      // 운동 기록 상태 ({ "YYYY-MM-DD": true })
+      // 운동 기록 상태 ({ "YYYY-MM-DD": "running" | "crossfit" })
       const [workouts, setWorkouts] = useState(() => {
         const saved = localStorage.getItem('shift_app_workouts');
         return saved ? JSON.parse(saved) : {};
@@ -170,14 +179,14 @@
         localStorage.setItem('shift_app_workouts', JSON.stringify(workouts));
       }, [workouts]);
 
-      // 운동 토글 함수
-      const toggleWorkout = (dateStr) => {
+      // 운동 종류 설정 함수 ('running' | 'crossfit' | null)
+      const setWorkoutType = (dateStr, type) => {
         setWorkouts(prev => {
           const next = { ...prev };
-          if (next[dateStr]) {
+          if (!type || next[dateStr] === type) {
             delete next[dateStr];
           } else {
-            next[dateStr] = true;
+            next[dateStr] = type;
           }
           return next;
         });
@@ -322,7 +331,10 @@
         const isToday = dateStr === todayStr;
         const dayOfWeek = d.getDay();
         const holidayName = getHolidayName(dateStr);
-        const isWorkout = !!workouts[dateStr];
+        
+        const rawWorkout = workouts[dateStr];
+        const workoutInfo = getWorkoutInfo(rawWorkout);
+        const isWorkout = !!workoutInfo;
 
         let shiftInfo;
         if (overrides[dateStr]) {
@@ -340,6 +352,7 @@
           isToday,
           holidayName,
           shiftInfo,
+          workoutInfo,
           isWorkout,
           dayEvents: events[dateStr] || []
         };
@@ -392,12 +405,16 @@
       const currMonthlyDays = useMemo(() => getMonthlyDays(currDate), [currDate, settings, overrides, events, workouts]);
 
       const monthSummary = useMemo(() => {
-        const summary = { 당직: 0, 주간: 0, 비번: 0, 연차: 0, 운동: 0 };
+        const summary = { 당직: 0, 주간: 0, 비번: 0, 연차: 0, 달리기: 0, 크로스핏: 0, 총운동: 0 };
         currMonthlyDays.forEach(day => {
           if (day.isCurrentMonth) {
             const s = day.shiftInfo.shift;
             if (summary[s] !== undefined) summary[s]++;
-            if (day.isWorkout) summary.운동++;
+            if (day.workoutInfo) {
+              summary.총운동++;
+              if (day.workoutInfo.type === 'crossfit') summary.크로스핏++;
+              else summary.달리기++;
+            }
           }
         });
         return summary;
@@ -446,7 +463,7 @@
                     dateNumColor = "text-blue-500";
                   }
 
-                  // 칸 배경색: 운동 완료 시 산뜻한 초록색 칸으로 확 변경!
+                  // 칸 배경색: 운동 완료 시 산뜻한 초록색 칸으로 변경
                   let cellBgStyle = !day.isCurrentMonth 
                     ? "bg-slate-50/40" 
                     : day.isWorkout 
@@ -470,10 +487,13 @@
                           <span className={`text-sm font-bold ${dateNumColor}`}>
                             {day.dayNum}
                           </span>
-                          {/* 운동 완료 시 날짜 옆 미니 덤벨/러닝 배지 */}
-                          {day.isWorkout && day.isCurrentMonth && (
-                            <span className="text-[11px] bg-emerald-600 text-white rounded-md px-1 py-0.2 font-bold shadow-xs">
-                              🏃
+                          {/* 운동 완료 시: 크로스핏(🏋️) 또는 달리기(🏃) 배지 */}
+                          {day.workoutInfo && day.isCurrentMonth && (
+                            <span 
+                              className="text-[11px] bg-emerald-600 text-white rounded-md px-1 py-0.2 font-bold shadow-xs flex items-center justify-center"
+                              title={day.workoutInfo.label}
+                            >
+                              {day.workoutInfo.icon}
                             </span>
                           )}
                         </div>
@@ -569,9 +589,10 @@
                           </div>
                         </div>
                         <div className="flex items-center space-x-1.5">
-                          {day.isWorkout && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-600 text-white flex items-center space-x-0.5 shadow-xs">
-                              <span>🏃 운동완료</span>
+                          {day.workoutInfo && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-600 text-white flex items-center space-x-1 shadow-xs">
+                              <span>{day.workoutInfo.icon}</span>
+                              <span>{day.workoutInfo.label}</span>
                             </span>
                           )}
                           {day.holidayName && (
@@ -614,24 +635,39 @@
                           )}
                         </div>
 
-                        <div className="flex space-x-1.5">
-                          <button
-                            onClick={() => toggleWorkout(day.dateStr)}
-                            className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1 border active:scale-95 ${
-                              day.isWorkout
-                                ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                                : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
-                            }`}
-                          >
-                            <span>🏃</span>
-                            <span>{day.isWorkout ? "운동 완료됨" : "운동 체크"}</span>
-                          </button>
+                        {/* 위클리 빠른 운동 선택 바 & 수정 버튼 */}
+                        <div className="space-y-1.5">
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <button
+                              onClick={() => setWorkoutType(day.dateStr, 'running')}
+                              className={`py-1.5 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1 border active:scale-95 ${
+                                day.workoutInfo?.type === 'running'
+                                  ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                                  : "bg-emerald-50/60 text-emerald-800 border-emerald-200/70 hover:bg-emerald-100"
+                              }`}
+                            >
+                              <span>🏃</span>
+                              <span>달리기</span>
+                            </button>
+                            <button
+                              onClick={() => setWorkoutType(day.dateStr, 'crossfit')}
+                              className={`py-1.5 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1 border active:scale-95 ${
+                                day.workoutInfo?.type === 'crossfit'
+                                  ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                                  : "bg-emerald-50/60 text-emerald-800 border-emerald-200/70 hover:bg-emerald-100"
+                              }`}
+                            >
+                              <span>🏋️</span>
+                              <span>크로스핏</span>
+                            </button>
+                          </div>
+
                           <button
                             onClick={() => setSelectedDateStr(day.dateStr)}
-                            className="px-2.5 py-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition active:scale-95"
-                            title="일정/근무 수정"
+                            className="w-full py-1 text-xs font-medium text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center justify-center space-x-1"
                           >
                             <i className="fa-solid fa-pen text-[10px]"></i>
+                            <span>일정/근무 수정</span>
                           </button>
                         </div>
                       </div>
@@ -724,7 +760,7 @@
                     {viewMode === 'yearly'
                       ? '한 해 12달 전체 선택 (좌우 슬라이드로 연도 이동)'
                       : viewMode === 'monthly'
-                      ? '월간 근무 및 일정 (날짜 꾹 누르면 퀵 팝업 & 운동 체크)'
+                      ? '월간 근무 및 일정 (날짜 꾹 누르면 퀵 팝업 & 운동 선택)'
                       : '주간 상세 스케줄 (좌우 슬라이드로 주 이동)'}
                   </p>
                 </div>
@@ -791,10 +827,15 @@
                   <span className="w-2 h-2 rounded-full bg-rose-500"></span>
                   <span>비번 {monthSummary.비번}</span>
                 </div>
-                {/* 운동 총 횟수 배지 */}
-                <div className="flex items-center space-x-1 bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                {/* 운동 총계: 달리기 / 크로스핏 상세 표시 */}
+                <div className="flex items-center space-x-1.5 bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  <span>운동 {monthSummary.운동}회</span>
+                  <span>운동 {monthSummary.총운동}회</span>
+                  {(monthSummary.달리기 > 0 || monthSummary.크로스핏 > 0) && (
+                    <span className="text-[10px] text-emerald-600 font-normal">
+                      (🏃{monthSummary.달리기} 🏋️{monthSummary.크로스핏})
+                    </span>
+                  )}
                 </div>
                 {monthSummary.연차 > 0 && (
                   <div className="flex items-center space-x-1 bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full border border-slate-200">
@@ -862,14 +903,15 @@
 
           <div className="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center space-x-4">
-              <span className="font-semibold text-slate-700">근무 범례:</span>
+              <span className="font-semibold text-slate-700">근무/운동 범례:</span>
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-blue-600 rounded-full inline-block"></span><span>당직</span></span>
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-amber-400 rounded-full inline-block"></span><span>주간</span></span>
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-rose-50 border border-rose-200 text-rose-600 font-bold text-[9px] rounded-full flex items-center justify-center inline-block">비</span><span>비번</span></span>
-              <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-emerald-100 border border-emerald-400 rounded-md inline-flex items-center justify-center text-[9px]">🏃</span><span>운동 완료 칸</span></span>
+              <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-emerald-100 border border-emerald-400 rounded-md inline-flex items-center justify-center text-[9px]">🏃</span><span>달리기</span></span>
+              <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-emerald-100 border border-emerald-400 rounded-md inline-flex items-center justify-center text-[9px]">🏋️</span><span>크로스핏</span></span>
             </div>
             <div className="text-slate-400 text-[11px]">
-              * 날짜를 터치하여 운동을 체크하면 먼슬리 칸 색상이 초록색으로 변경됩니다.
+              * 날짜를 가볍게 터치하거나 꾹 눌러 달리기/크로스핏을 선택할 수 있습니다.
             </div>
           </div>
 
@@ -877,8 +919,8 @@
           {previewDayInfo && (
             <QuickPreviewPopup
               dayInfo={previewDayInfo}
-              isWorkout={!!workouts[previewDayInfo.dateStr]}
-              onToggleWorkout={() => toggleWorkout(previewDayInfo.dateStr)}
+              workoutInfo={previewDayInfo.workoutInfo}
+              onSelectWorkout={(type) => setWorkoutType(previewDayInfo.dateStr, type)}
               onClose={() => setPreviewDayInfo(null)}
               onOpenDetail={() => {
                 setSelectedDateStr(previewDayInfo.dateStr);
@@ -891,8 +933,8 @@
           {selectedDateStr && (
             <DateDetailModal
               dateStr={selectedDateStr}
-              isWorkout={!!workouts[selectedDateStr]}
-              onToggleWorkout={() => toggleWorkout(selectedDateStr)}
+              workoutInfo={getWorkoutInfo(workouts[selectedDateStr])}
+              onSelectWorkout={(type) => setWorkoutType(selectedDateStr, type)}
               onClose={() => setSelectedDateStr(null)}
               settings={settings}
               overrideShift={overrides[selectedDateStr]}
@@ -984,7 +1026,7 @@
     }
 
     // --- 롱프레스 간략 팝업 컴포넌트 ---
-    function QuickPreviewPopup({ dayInfo, isWorkout, onToggleWorkout, onClose, onOpenDetail }) {
+    function QuickPreviewPopup({ dayInfo, workoutInfo, onSelectWorkout, onClose, onOpenDetail }) {
       const { dateStr, holidayName, shiftInfo, dayEvents, dayOfWeek } = dayInfo;
       const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dayOfWeek];
 
@@ -1021,24 +1063,47 @@
               </button>
             </div>
 
-            {/* 원터치 운동 완료 체크 버튼 */}
-            <button
-              type="button"
-              onClick={onToggleWorkout}
-              className={`w-full py-2 px-3 text-xs font-bold rounded-xl transition flex items-center justify-between border shadow-2xs ${
-                isWorkout
-                  ? 'bg-emerald-600 text-white border-emerald-600'
-                  : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-              }`}
-            >
-              <div className="flex items-center space-x-1.5">
-                <span className="text-sm">🏃</span>
-                <span>{isWorkout ? '운동 완료 기록됨' : '오늘 운동 기록하기'}</span>
+            {/* 운동 선택 바 (달리기 / 크로스핏) */}
+            <div>
+              <div className="text-[11px] font-bold text-slate-500 mb-1.5 flex items-center justify-between">
+                <span>오늘의 운동</span>
+                {workoutInfo && (
+                  <button 
+                    onClick={() => onSelectWorkout(null)} 
+                    className="text-[10px] text-rose-500 hover:underline font-semibold"
+                  >
+                    기록 취소
+                  </button>
+                )}
               </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${isWorkout ? 'bg-white text-emerald-700' : 'bg-emerald-200/70 text-emerald-900'}`}>
-                {isWorkout ? '완료 ✓' : '체크하기'}
-              </span>
-            </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSelectWorkout('running')}
+                  className={`py-2 px-3 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 border shadow-2xs ${
+                    workoutInfo?.type === 'running'
+                      ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-300'
+                      : 'bg-emerald-50/70 text-emerald-900 border-emerald-200 hover:bg-emerald-100'
+                  }`}
+                >
+                  <span className="text-base">🏃</span>
+                  <span>달리기 {workoutInfo?.type === 'running' && '✓'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onSelectWorkout('crossfit')}
+                  className={`py-2 px-3 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 border shadow-2xs ${
+                    workoutInfo?.type === 'crossfit'
+                      ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-300'
+                      : 'bg-emerald-50/70 text-emerald-900 border-emerald-200 hover:bg-emerald-100'
+                  }`}
+                >
+                  <span className="text-base">🏋️</span>
+                  <span>크로스핏 {workoutInfo?.type === 'crossfit' && '✓'}</span>
+                </button>
+              </div>
+            </div>
 
             <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
               <div className="text-xs font-bold text-slate-500 flex items-center justify-between">
@@ -1077,8 +1142,8 @@
 
     function DateDetailModal({
       dateStr,
-      isWorkout,
-      onToggleWorkout,
+      workoutInfo,
+      onSelectWorkout,
       onClose,
       settings,
       overrideShift,
@@ -1128,7 +1193,7 @@
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-300 mt-0.5">근무 수정, 운동 체크 및 일정 관리</p>
+                <p className="text-xs text-slate-300 mt-0.5">근무 수정, 운동 종류 선택 및 일정 관리</p>
               </div>
               <button onClick={onClose} className="p-1 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition">
                 <i className="fa-solid fa-xmark text-lg"></i>
@@ -1136,35 +1201,59 @@
             </div>
 
             <div className="p-5 space-y-5 max-h-[80vh] overflow-y-auto">
-              {/* 1. 운동 완료 원터치 체크 영역 */}
+              {/* 1. 운동 종류 선택 영역 (달리기 🏃 / 크로스핏 🏋️ / 취소) */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  운동 기록
-                </label>
-                <button
-                  type="button"
-                  onClick={onToggleWorkout}
-                  className={`w-full p-3 rounded-xl border transition flex items-center justify-between ${
-                    isWorkout
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                      : 'bg-emerald-50/70 text-emerald-900 border-emerald-200 hover:bg-emerald-100'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2.5">
-                    <span className="text-lg">🏃</span>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    오늘의 운동 기록
+                  </label>
+                  {workoutInfo && (
+                    <button 
+                      onClick={() => onSelectWorkout(null)} 
+                      className="text-[11px] text-rose-500 hover:underline font-semibold"
+                    >
+                      기록 취소
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onSelectWorkout('running')}
+                    className={`p-3 rounded-xl border transition flex items-center space-x-2.5 ${
+                      workoutInfo?.type === 'running'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-300'
+                        : 'bg-emerald-50/70 text-emerald-950 border-emerald-200 hover:bg-emerald-100'
+                    }`}
+                  >
+                    <span className="text-2xl">🏃</span>
                     <div className="text-left">
-                      <div className="font-bold text-xs">{isWorkout ? '오늘 운동 완료!' : '오늘 운동 완료 체크하기'}</div>
-                      <div className={`text-[10px] ${isWorkout ? 'text-emerald-100' : 'text-emerald-700'}`}>
-                        {isWorkout ? '먼슬리 달력 칸이 초록색으로 표시됩니다' : '터치하여 운동 완료를 기록하세요'}
+                      <div className="font-bold text-xs">달리기</div>
+                      <div className={`text-[10px] ${workoutInfo?.type === 'running' ? 'text-emerald-100' : 'text-emerald-700'}`}>
+                        {workoutInfo?.type === 'running' ? '선택 완료됨' : '러닝 기록'}
                       </div>
                     </div>
-                  </div>
-                  <span className={`text-xs font-bold px-3 py-1.5 rounded-lg transition ${
-                    isWorkout ? 'bg-white text-emerald-700 shadow-2xs' : 'bg-emerald-200/80 text-emerald-900'
-                  }`}>
-                    {isWorkout ? '✓ 완료' : '미완료'}
-                  </span>
-                </button>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onSelectWorkout('crossfit')}
+                    className={`p-3 rounded-xl border transition flex items-center space-x-2.5 ${
+                      workoutInfo?.type === 'crossfit'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-300'
+                        : 'bg-emerald-50/70 text-emerald-950 border-emerald-200 hover:bg-emerald-100'
+                    }`}
+                  >
+                    <span className="text-2xl">🏋️</span>
+                    <div className="text-left">
+                      <div className="font-bold text-xs">크로스핏</div>
+                      <div className={`text-[10px] ${workoutInfo?.type === 'crossfit' ? 'text-emerald-100' : 'text-emerald-700'}`}>
+                        {workoutInfo?.type === 'crossfit' ? '선택 완료됨' : '역도/와드 기록'}
+                      </div>
+                    </div>
+                  </button>
+                </div>
               </div>
 
               <hr className="border-slate-100" />
