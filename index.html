@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -125,6 +126,11 @@
       const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
       const containerRef = useRef(null);
 
+      // 꾹 누르기(롱프레스) 간략 팝업 상태
+      const [previewDayInfo, setPreviewDayInfo] = useState(null);
+      const longPressTimerRef = useRef(null);
+      const isLongPressedRef = useRef(false);
+
       const [settings, setSettings] = useState(() => {
         const saved = localStorage.getItem('shift_app_settings');
         return saved ? JSON.parse(saved) : { anchorDate: '2026-09-01', anchorShift: '당직' };
@@ -207,12 +213,25 @@
         const deltaX = currentX - touchStartRef.current.x;
         const deltaY = currentY - touchStartRef.current.y;
 
+        // 드래그 움직임이 감지되면 롱프레스 취소
+        if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) {
+          if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+          }
+        }
+
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
           setDragX(deltaX);
         }
       };
 
       const handleTouchEnd = () => {
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+
         if (!isDragging) return;
         setIsDragging(false);
 
@@ -246,6 +265,32 @@
         setIsAnimating(false);
         setDragX(0);
         pendingDirectionRef.current = 0;
+      };
+
+      // --- 롱프레스 핸들러 (먼슬리 날짜 꾹 누를 때) ---
+      const handleCellTouchStart = (day) => {
+        isLongPressedRef.current = false;
+        longPressTimerRef.current = setTimeout(() => {
+          isLongPressedRef.current = true;
+          setPreviewDayInfo(day);
+          if (navigator.vibrate) navigator.vibrate(40);
+        }, 450); // 0.45초 꾹 누르면 팝업 발동
+      };
+
+      const handleCellTouchEnd = () => {
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+      };
+
+      const handleCellClick = (day) => {
+        // 방금 롱프레스가 발동되었으면 일반 클릭(전체 모달 열기)은 건너뜀
+        if (isLongPressedRef.current) {
+          isLongPressedRef.current = false;
+          return;
+        }
+        setSelectedDateStr(day.dateStr);
       };
 
       const getDayInfo = (d) => {
@@ -382,8 +427,12 @@
                   return (
                     <div
                       key={idx}
-                      onClick={() => setSelectedDateStr(day.dateStr)}
-                      className={`min-h-[150px] p-2 transition cursor-pointer flex flex-col justify-between group hover:bg-slate-50/80 ${
+                      onTouchStart={() => handleCellTouchStart(day)}
+                      onTouchEnd={handleCellTouchEnd}
+                      onMouseDown={() => handleCellTouchStart(day)}
+                      onMouseUp={handleCellTouchEnd}
+                      onClick={() => handleCellClick(day)}
+                      className={`min-h-[150px] p-2 transition cursor-pointer flex flex-col justify-between group hover:bg-slate-50/80 active:bg-slate-100/70 ${
                         !day.isCurrentMonth ? "bg-slate-50/40" : "bg-white"
                       } ${day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""}`}
                     >
@@ -405,14 +454,15 @@
                         <ShiftBadge info={day.shiftInfo} />
                       </div>
 
+                      {/* 등록된 일정: 초록색(Emerald) 배지로 산뜻하게 표시 */}
                       <div className="space-y-1 mt-auto max-h-[65px] overflow-y-auto custom-scrollbar pr-0.5">
                         {day.dayEvents.map((evt) => (
                           <div
                             key={evt.id}
-                            className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-1.5 py-1 rounded-md truncate font-medium flex items-center justify-between border border-slate-200/60"
+                            className="text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 px-1.5 py-1 rounded-md truncate font-semibold flex items-center justify-between shadow-2xs"
                           >
                             <span className="truncate">{evt.title}</span>
-                            {evt.time && <span className="text-[9px] text-slate-400 pl-1 shrink-0">{evt.time}</span>}
+                            {evt.time && <span className="text-[9px] text-emerald-600 pl-1 shrink-0">{evt.time}</span>}
                           </div>
                         ))}
                       </div>
@@ -447,7 +497,6 @@
                     dateNumColor = "text-blue-500";
                   }
 
-                  // 오늘의 근무 칸 배경색 및 텍스트 스타일 (주간: 노랑 / 당직: 파랑 / 비번: 은은하고 옅은 로즈핑크)
                   const shift = day.shiftInfo.shift;
                   let shiftBoxStyle = "bg-white border-slate-200";
                   let shiftLabelStyle = "text-slate-600 font-medium";
@@ -488,12 +537,12 @@
                       </div>
 
                       <div className="p-3 flex-1 flex flex-col justify-between space-y-3">
-                        {/* 오늘의 근무 칸 */}
                         <div className={`flex items-center justify-between p-2.5 rounded-xl border transition ${shiftBoxStyle}`}>
                           <span className={`text-xs ${shiftLabelStyle}`}>오늘의 근무</span>
                           <ShiftBadge info={day.shiftInfo} />
                         </div>
 
+                        {/* 위클리 일정 목록: 초록색(Emerald) 테마로 적용 */}
                         <div className="space-y-1.5 flex-1 min-h-[100px]">
                           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
                             <span>일정 ({day.dayEvents.length})</span>
@@ -503,13 +552,13 @@
                             day.dayEvents.map((evt) => (
                               <div
                                 key={evt.id}
-                                className="text-xs bg-slate-50 hover:bg-slate-100 text-slate-800 p-2 rounded-xl border border-slate-200/80 space-y-0.5"
+                                className="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-900 p-2.5 rounded-xl border border-emerald-200/80 space-y-0.5 shadow-2xs"
                               >
-                                <div className="font-semibold flex items-center justify-between">
+                                <div className="font-bold flex items-center justify-between">
                                   <span>{evt.title}</span>
-                                  {evt.time && <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">{evt.time}</span>}
+                                  {evt.time && <span className="text-[10px] text-emerald-700 font-bold bg-white/80 px-1.5 py-0.5 rounded border border-emerald-200/60">{evt.time}</span>}
                                 </div>
-                                {evt.note && <div className="text-[10px] text-slate-500 leading-tight">{evt.note}</div>}
+                                {evt.note && <div className="text-[10px] text-emerald-700/80 leading-tight">{evt.note}</div>}
                               </div>
                             ))
                           ) : (
@@ -616,7 +665,7 @@
                     {viewMode === 'yearly'
                       ? '한 해 12달 전체 선택 (좌우 슬라이드로 연도 이동)'
                       : viewMode === 'monthly'
-                      ? '월간 근무 및 일정 (손가락 위치에 맞춰 양방향 연속 이동)'
+                      ? '월간 근무 및 일정 (날짜를 꾹 누르면 간략 팝업)'
                       : '주간 상세 스케줄 (좌우 슬라이드로 주 이동)'}
                   </p>
                 </div>
@@ -756,10 +805,23 @@
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-emerald-600 rounded-full inline-block"></span><span>연차/기타</span></span>
             </div>
             <div className="text-slate-400 text-[11px]">
-              * 주간 근무일이 토/일/공휴일인 경우 자동으로 비번 전환됩니다.
+              * 날짜를 가볍게 터치하면 등록/수정 모달, 길게 누르면 간략 팝업이 나타납니다.
             </div>
           </div>
 
+          {/* 롱프레스 간략 팝업 모달 */}
+          {previewDayInfo && (
+            <QuickPreviewPopup
+              dayInfo={previewDayInfo}
+              onClose={() => setPreviewDayInfo(null)}
+              onOpenDetail={() => {
+                setSelectedDateStr(previewDayInfo.dateStr);
+                setPreviewDayInfo(null);
+              }}
+            />
+          )}
+
+          {/* 상세 일정/근무 수정 모달 */}
           {selectedDateStr && (
             <DateDetailModal
               dateStr={selectedDateStr}
@@ -850,6 +912,79 @@
         <span className="w-7 h-7 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-xs">
           {shift.substring(0, 1)}
         </span>
+      );
+    }
+
+    // --- 롱프레스 간략 팝업 컴포넌트 ---
+    function QuickPreviewPopup({ dayInfo, onClose, onOpenDetail }) {
+      const { dateStr, holidayName, shiftInfo, dayEvents, dayOfWeek } = dayInfo;
+      const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dayOfWeek];
+
+      const shift = shiftInfo.shift;
+      let badgeColor = "bg-slate-800 text-white";
+      if (shift === '당직') badgeColor = "bg-blue-600 text-white";
+      if (shift === '주간') badgeColor = "bg-amber-400 text-slate-900";
+      if (shift === '비번') badgeColor = "bg-rose-500 text-white";
+
+      return (
+        <div 
+          onClick={onClose}
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-150"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl max-w-xs w-full overflow-hidden border border-slate-100 p-4 space-y-3.5 transform transition-all scale-100 animate-in zoom-in-95 duration-150"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div>
+                <div className="flex items-center space-x-1.5">
+                  <h4 className="text-base font-bold text-slate-800">{dateStr} ({dayOfWeekKorean})</h4>
+                  {holidayName && (
+                    <span className="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">{holidayName}</span>
+                  )}
+                </div>
+                <div className="text-[11px] text-slate-400 mt-0.5 flex items-center space-x-1.5">
+                  <span>근무:</span>
+                  <span className={`px-2 py-0.5 rounded-md font-bold text-xs ${badgeColor}`}>{shift}</span>
+                </div>
+              </div>
+              <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
+                <i className="fa-solid fa-xmark text-base"></i>
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+              <div className="text-xs font-bold text-slate-500 flex items-center justify-between">
+                <span>등록된 일정 ({dayEvents.length})</span>
+              </div>
+              {dayEvents.length > 0 ? (
+                dayEvents.map((evt) => (
+                  <div key={evt.id} className="p-2.5 bg-emerald-50/80 border border-emerald-200/80 rounded-xl space-y-0.5">
+                    <div className="font-bold text-xs text-emerald-950 flex items-center justify-between">
+                      <span>{evt.title}</span>
+                      {evt.time && <span className="text-[10px] bg-white px-1.5 py-0.5 rounded text-emerald-700 font-bold border border-emerald-200/60">{evt.time}</span>}
+                    </div>
+                    {evt.note && <div className="text-[11px] text-emerald-800/80 leading-tight">{evt.note}</div>}
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-slate-400 text-center py-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  등록된 일정이 없습니다.
+                </p>
+              )}
+            </div>
+
+            <div className="pt-1 flex space-x-2">
+              <button
+                onClick={onOpenDetail}
+                className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition shadow-xs flex items-center justify-center space-x-1.5"
+              >
+                <i className="fa-solid fa-pen-to-square text-[11px]"></i>
+                <span>일정 등록 / 수정하기</span>
+              </button>
+            </div>
+          </div>
+        </div>
       );
     }
 
@@ -976,11 +1111,11 @@
                 {events.length > 0 ? (
                   <div className="space-y-2 mb-4">
                     {events.map((evt) => (
-                      <div key={evt.id} className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                      <div key={evt.id} className="p-2.5 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between text-xs">
                         <div>
-                          <div className="font-semibold text-slate-800">{evt.title}</div>
-                          {evt.time && <div className="text-slate-400 text-[11px]">{evt.time}</div>}
-                          {evt.note && <div className="text-slate-500 text-[11px] mt-0.5">{evt.note}</div>}
+                          <div className="font-bold text-emerald-950">{evt.title}</div>
+                          {evt.time && <div className="text-emerald-700 font-semibold text-[11px]">{evt.time}</div>}
+                          {evt.note && <div className="text-emerald-800/80 text-[11px] mt-0.5">{evt.note}</div>}
                         </div>
                         <button
                           onClick={() => onDeleteEvent(evt.id)}
