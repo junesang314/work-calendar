@@ -959,7 +959,7 @@
           {/* 📌 하단 버전 표시 */}
           <div className="mt-8 mb-4 text-center select-none">
             <span className="text-[11px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-1 rounded-full border border-slate-200/60">
-              근무표 v1.3.2
+              근무표 v1.4.0
             </span>
           </div>
 
@@ -1089,7 +1089,7 @@
       );
     }
 
-    // --- 📷 한눈에 보기 / 자동 크롭 이미지 저장 및 공유 모달 ---
+    // --- 📷 한눈에 보기 / 전체 배경색 타일 방식 캡처 모달 (글자 잘림 100% 방지) ---
     function ShareCaptureModal({ currDate, monthlyDays, monthSummary, onClose }) {
       const [shareTab, setShareTab] = useState('calendar'); // 'calendar' | 'list'
       const [copySuccess, setCopySuccess] = useState(false);
@@ -1099,7 +1099,7 @@
       const year = currDate.getFullYear();
       const month = currDate.getMonth() + 1;
 
-      // 🖼️ 달력 카드 영역만 크롭해서 완벽한 비율의 이미지로 저장/공유
+      // 🖼️ 달력 카드 영역만 크롭해서 완벽한 타일 이미지로 저장/공유
       const handleSaveCroppedImage = async () => {
         if (!cardRef.current || isGenerating) return;
         setIsGenerating(true);
@@ -1113,14 +1113,7 @@
             scale: 3, // 초고화질
             useCORS: true,
             backgroundColor: '#ffffff',
-            logging: false,
-            onclone: (clonedDoc) => {
-              // 캡처 복제본에서 한글 폰트 베이스라인 완벽 고정
-              const shiftTexts = clonedDoc.querySelectorAll('.export-shift-text');
-              shiftTexts.forEach(el => {
-                el.style.transform = 'translateY(-0.5px)';
-              });
-            }
+            logging: false
           });
 
           canvas.toBlob(async (blob) => {
@@ -1209,7 +1202,7 @@
               </div>
 
               <div className="flex items-center space-x-2">
-                {/* 🌟 원터치 깔끔 이미지 저장 버튼 */}
+                {/* 🌟 원터치 이미지 저장 버튼 */}
                 {shareTab === 'calendar' && (
                   <button
                     onClick={handleSaveCroppedImage}
@@ -1250,7 +1243,7 @@
             <div className="p-3 sm:p-4 overflow-y-auto custom-scrollbar">
               
               {shareTab === 'calendar' ? (
-                /* 1. 모바일 1화면에 쏙 들어오는 초컴팩트 캡처용 달력 카드 (ref 연결) */
+                /* 1. 🌟 날짜 칸 전체를 근무 색상 타일로 채운 완벽한 캡처 카드 */
                 <div 
                   ref={cardRef}
                   className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3"
@@ -1265,8 +1258,8 @@
                     </span>
                   </div>
 
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="grid grid-cols-7 text-center bg-slate-50 font-bold text-[10px] py-1.5 border-b border-slate-200">
+                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                    <div className="grid grid-cols-7 text-center bg-slate-100 font-bold text-[10px] py-1.5 border-b border-slate-200 text-slate-600">
                       <div className="text-red-500">일</div>
                       <div>월</div>
                       <div>화</div>
@@ -1276,94 +1269,103 @@
                       <div className="text-blue-500">토</div>
                     </div>
 
-                    <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 bg-slate-50/20">
+                    <div className="grid grid-cols-7 divide-x divide-y divide-white/60 bg-slate-100">
                       {monthlyDays.map((day, idx) => {
                         const isSunday = day.dayOfWeek === 0;
                         const isSaturday = day.dayOfWeek === 6;
                         const isHoliday = !!day.holidayName;
                         const shift = day.shiftInfo.shift;
 
-                        let numColor = "text-slate-700";
-                        if (!day.isCurrentMonth) numColor = "text-slate-300";
-                        else if (day.isWorkout) numColor = "text-white font-bold";
-                        else if (isSunday || isHoliday) numColor = "text-red-500 font-bold";
-                        else if (isSaturday) numColor = "text-blue-500 font-bold";
+                        // 🎨 칸 전체 배경색 및 텍스트 색상 결정
+                        let cellBg = "#ffffff";
+                        let numColor = "#1e293b";
+                        let shiftColor = "#475569";
+                        let isDark = false;
 
-                        // 근무 배지 전용 인라인 스타일
-                        let shiftBadgeStyle = {};
-                        if (shift === '당직') {
-                          shiftBadgeStyle = { backgroundColor: '#2563eb', color: '#ffffff' };
+                        if (!day.isCurrentMonth) {
+                          cellBg = "#f8fafc";
+                          numColor = "#cbd5e1";
+                          shiftColor = "#cbd5e1";
+                        } else if (day.isWorkout) {
+                          // 운동한 날: 딥 클래식 네이비
+                          cellBg = "#1e3a8a";
+                          numColor = "#ffffff";
+                          shiftColor = "#bfdbfe";
+                          isDark = true;
+                        } else if (shift === '당직') {
+                          // 당직: 선명한 로열 블루
+                          cellBg = "#2563eb";
+                          numColor = "#ffffff";
+                          shiftColor = "#ffffff";
+                          isDark = true;
                         } else if (shift === '주간') {
-                          shiftBadgeStyle = { backgroundColor: '#f59e0b', color: '#0f172a' };
+                          // 주간: 밝고 화사한 앰버 옐로우
+                          cellBg = "#fef3c7";
+                          numColor = "#92400e";
+                          shiftColor = "#b45309";
                         } else if (shift === '비번') {
-                          shiftBadgeStyle = day.isWorkout 
-                            ? { backgroundColor: '#ffe4e6', color: '#9f1239' } 
-                            : { backgroundColor: '#fff1f2', color: '#e11d48', border: '1px solid #fecdd3' };
-                        } else {
-                          shiftBadgeStyle = { backgroundColor: '#f1f5f9', color: '#334155' };
+                          // 비번: 은은한 로즈 핑크
+                          cellBg = "#ffe4e6";
+                          numColor = isSunday || isHoliday ? "#e11d48" : isSaturday ? "#2563eb" : "#881337";
+                          shiftColor = "#be123c";
+                        }
+
+                        if (day.isCurrentMonth && !isDark) {
+                          if (isSunday || isHoliday) numColor = "#e11d48";
+                          else if (isSaturday) numColor = "#2563eb";
                         }
 
                         return (
                           <div
                             key={idx}
-                            className={`min-h-[74px] p-1.5 flex flex-col justify-between ${
-                              !day.isCurrentMonth 
-                                ? 'bg-slate-50/50' 
-                                : day.isWorkout 
-                                ? 'bg-[#1e3a8a]' 
-                                : 'bg-white'
-                            }`}
+                            style={{ backgroundColor: cellBg }}
+                            className="min-h-[66px] p-1.5 flex flex-col justify-between transition"
                           >
-                            <div className="flex items-center justify-between leading-none">
-                              <span className={`text-[10px] font-bold ${numColor}`}>{day.dayNum}</span>
+                            {/* 상단: 날짜 숫자 + 운동 아이콘 */}
+                            <div className="flex items-start justify-between leading-none">
+                              <span 
+                                style={{ color: numColor }}
+                                className="text-[11px] font-black"
+                              >
+                                {day.dayNum}
+                              </span>
                               {day.workoutInfo && day.isCurrentMonth && (
-                                <span className="text-[10px] leading-none">{day.workoutInfo.icon}</span>
+                                <span className="text-[10px] leading-none" title={day.workoutInfo.label}>
+                                  {day.workoutInfo.icon}
+                                </span>
                               )}
                             </div>
 
-                            {/* 📌 근무 배지: 충분한 높이(20px)와 완벽한 중앙 정렬 테이블/Flex 구조 */}
-                            <div className="my-auto py-1 flex items-center justify-center">
-                              <div 
-                                style={{
-                                  ...shiftBadgeStyle,
-                                  height: '20px',
-                                  minWidth: '36px',
-                                  padding: '0 5px',
-                                  borderRadius: '5px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center'
-                                }}
-                              >
-                                <span 
-                                  className="export-shift-text"
-                                  style={{
-                                    fontSize: '10.5px',
-                                    fontWeight: '800',
-                                    lineHeight: '1',
-                                    letterSpacing: '-0.3px',
-                                    display: 'inline-block'
-                                  }}
+                            {/* 중앙: 큼직하고 시원한 근무 텍스트 (배지 없이 칸 전체 일체형) */}
+                            <div className="my-auto py-0.5 text-center">
+                              {day.isCurrentMonth && (
+                                <div 
+                                  style={{ color: shiftColor }}
+                                  className="text-[12.5px] font-black tracking-tight leading-none"
                                 >
                                   {shift}
-                                </span>
-                              </div>
+                                </div>
+                              )}
                             </div>
 
-                            {/* 📌 등록된 일정: 배지와 겹치지 않도록 분리 */}
-                            <div className="space-y-0.5 min-h-[14px]">
+                            {/* 하단: 등록된 일정 */}
+                            <div className="min-h-[14px] flex flex-col justify-end">
                               {day.dayEvents.slice(0, 1).map((evt) => (
                                 <div 
                                   key={evt.id} 
-                                  className={`text-[8.5px] px-1 py-0.2 rounded truncate font-semibold leading-tight ${
-                                    day.isWorkout ? 'bg-white/95 text-slate-900' : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
+                                  className={`text-[8.5px] px-1 py-0.2 rounded truncate font-bold leading-tight shadow-2xs ${
+                                    isDark 
+                                      ? 'bg-white/95 text-slate-900' 
+                                      : 'bg-white/90 text-slate-800 border border-slate-200/80'
                                   }`}
                                 >
                                   {evt.title}
                                 </div>
                               ))}
                               {day.dayEvents.length > 1 && (
-                                <div className="text-[7.5px] text-slate-400 text-right leading-none">+{day.dayEvents.length - 1}</div>
+                                <div className={`text-[7.5px] font-bold text-right leading-none ${isDark ? 'text-blue-200' : 'text-slate-500'}`}>
+                                  +{day.dayEvents.length - 1}
+                                </div>
                               )}
                             </div>
                           </div>
