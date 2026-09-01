@@ -134,10 +134,41 @@
       const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
       const containerRef = useRef(null);
 
-      // 롱프레스 간략 팝업 상태
+      // 롱프레스 간략 팝업 상태 (날짜 셀용)
       const [previewDayInfo, setPreviewDayInfo] = useState(null);
       const longPressTimerRef = useRef(null);
       const isLongPressedRef = useRef(false);
+
+      // 캡처 & 공유 모달 상태
+      const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+      // 📌 상단 연월 제목 롱프레스(길게 누르기) 제어 Ref
+      const headerLongPressTimerRef = useRef(null);
+      const isHeaderLongPressedRef = useRef(false);
+
+      const handleHeaderTouchStart = () => {
+        isHeaderLongPressedRef.current = false;
+        headerLongPressTimerRef.current = setTimeout(() => {
+          isHeaderLongPressedRef.current = true;
+          setIsShareModalOpen(true);
+          if (navigator.vibrate) navigator.vibrate(40);
+        }, 500);
+      };
+
+      const handleHeaderTouchEnd = () => {
+        if (headerLongPressTimerRef.current) {
+          clearTimeout(headerLongPressTimerRef.current);
+          headerLongPressTimerRef.current = null;
+        }
+      };
+
+      const handleHeaderClick = () => {
+        if (isHeaderLongPressedRef.current) {
+          isHeaderLongPressedRef.current = false;
+          return;
+        }
+        toggleYearlyView();
+      };
 
       const [settings, setSettings] = useState(() => {
         const saved = localStorage.getItem('shift_app_settings');
@@ -754,11 +785,16 @@
                   <i className="fa-solid fa-calendar-days text-xl"></i>
                 </div>
 
+                {/* 📌 상단 연월 제목: 가볍게 탭하면 12달 보기 / 꾹 길게 누르면 캡처/공유 창 열림 */}
                 <div>
                   <div
-                    onClick={toggleYearlyView}
-                    className="cursor-pointer group flex items-center space-x-1.5 hover:opacity-80 transition"
-                    title="터치하여 12달 보기"
+                    onTouchStart={handleHeaderTouchStart}
+                    onTouchEnd={handleHeaderTouchEnd}
+                    onMouseDown={handleHeaderTouchStart}
+                    onMouseUp={handleHeaderTouchEnd}
+                    onClick={handleHeaderClick}
+                    className="cursor-pointer group flex items-center space-x-1.5 hover:opacity-80 transition select-none"
+                    title="터치: 12달 보기 / 길게 누르기: 캡처 및 공유"
                   >
                     <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
                       {viewMode === 'yearly'
@@ -775,7 +811,7 @@
                     {viewMode === 'yearly'
                       ? '한 해 12달 전체 선택 (좌우 슬라이드로 연도 이동)'
                       : viewMode === 'monthly'
-                      ? '월간 근무 및 일정 (날짜 꾹 누르면 퀵 팝업 & 운동 선택)'
+                      ? '월간 근무 및 일정 (상단 연월 길게 누르면 캡처 공유 뷰)'
                       : '주간 상세 스케줄 (좌우 슬라이드로 주 이동)'}
                   </p>
                 </div>
@@ -928,7 +964,7 @@
               <span className="flex items-center space-x-1"><span className="w-4 h-4 bg-[#1e3a8a] text-white rounded-md inline-flex items-center justify-center text-[10px]">🏋️</span><span>크로스핏 완료</span></span>
             </div>
             <div className="text-slate-400 text-[11px]">
-              * 날짜를 터치하여 운동 및 일정을 관리할 수 있습니다.
+              * 상단 연월 제목({currDate.getFullYear()}년 {currDate.getMonth() + 1}월)을 길게 누르면 캡처/공유 창이 열립니다.
             </div>
           </div>
 
@@ -976,6 +1012,16 @@
                   [selectedDateStr]: list.filter((e) => e.id !== eventId)
                 });
               }}
+            />
+          )}
+
+          {/* 📷 한눈에 보기 / 캡처 공유 모달 (상단 연월 롱프레스로 발동) */}
+          {isShareModalOpen && (
+            <ShareCaptureModal
+              currDate={currDate}
+              monthlyDays={currMonthlyDays}
+              monthSummary={monthSummary}
+              onClose={() => setIsShareModalOpen(false)}
             />
           )}
 
@@ -1045,6 +1091,272 @@
         <span className="w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-xs">
           {shift.substring(0, 1)}
         </span>
+      );
+    }
+
+    // --- 📷 한눈에 보기 / 캡처 및 공유 전용 모달 ---
+    function ShareCaptureModal({ currDate, monthlyDays, monthSummary, onClose }) {
+      const [shareTab, setShareTab] = useState('calendar'); // 'calendar' | 'list'
+      const [copySuccess, setCopySuccess] = useState(false);
+
+      const year = currDate.getFullYear();
+      const month = currDate.getMonth() + 1;
+
+      // 텍스트 복사 생성
+      const generateTextSummary = () => {
+        let text = `📅 ${year}년 ${month}월 근무 및 일정 스케줄\n`;
+        text += `당직 ${monthSummary.당직}회 / 주간 ${monthSummary.주간}회 / 비번 ${monthSummary.비번}회 (운동 ${monthSummary.총운동}회)\n\n`;
+
+        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+        monthlyDays.forEach(day => {
+          if (day.isCurrentMonth) {
+            const dNum = String(day.dayNum).padStart(2, '0');
+            const dayName = dayNames[day.dayOfWeek];
+            const shift = day.shiftInfo.shift;
+            const workout = day.workoutInfo ? ` [${day.workoutInfo.label} 완료]` : '';
+            const eventsText = day.dayEvents.length > 0 
+              ? ` - ${day.dayEvents.map(e => e.time ? `${e.title}(${e.time})` : e.title).join(', ')}`
+              : '';
+            const holiday = day.holidayName ? ` (${day.holidayName})` : '';
+
+            text += `${month}.${dNum}(${dayName}) [${shift}]${holiday}${workout}${eventsText}\n`;
+          }
+        });
+
+        return text;
+      };
+
+      const handleCopyText = () => {
+        const text = generateTextSummary();
+        navigator.clipboard.writeText(text).then(() => {
+          setCopySuccess(true);
+          setTimeout(() => setCopySuccess(false), 2000);
+        });
+      };
+
+      return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-slate-100 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 my-auto animate-in fade-in zoom-in duration-150 flex flex-col max-h-[96vh]">
+            
+            {/* 상단 컨트롤 바 */}
+            <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between shrink-0">
+              <div className="flex items-center space-x-2">
+                <i className="fa-solid fa-camera text-indigo-400"></i>
+                <h3 className="text-sm font-bold">한눈에 보기 및 캡처 공유</h3>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="bg-slate-800 p-0.5 rounded-lg flex text-[11px] font-semibold">
+                  <button
+                    onClick={() => setShareTab('calendar')}
+                    className={`px-2.5 py-1 rounded-md transition ${shareTab === 'calendar' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    달력 뷰
+                  </button>
+                  <button
+                    onClick={() => setShareTab('list')}
+                    className={`px-2.5 py-1 rounded-md transition ${shareTab === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    목록 뷰
+                  </button>
+                </div>
+                <button onClick={onClose} className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white">
+                  <i className="fa-solid fa-xmark text-base"></i>
+                </button>
+              </div>
+            </div>
+
+            {/* 메인 캡처 프레임 영역 */}
+            <div className="p-3 sm:p-4 overflow-y-auto custom-scrollbar flex-1">
+              
+              {shareTab === 'calendar' ? (
+                /* 1. 모바일 1화면에 쏙 들어오는 초컴팩트 캡처용 달력 카드 */
+                <div className="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200 space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <div>
+                      <h4 className="text-base font-black text-slate-900">{year}년 {month}월 스케줄</h4>
+                      <p className="text-[10px] text-slate-400 mt-0.2">당직 {monthSummary.당직}회 · 주간 {monthSummary.주간}회 · 비번 {monthSummary.비번}회 · 운동 {monthSummary.총운동}회</p>
+                    </div>
+                    <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md border border-indigo-100">
+                      근무표
+                    </span>
+                  </div>
+
+                  <div className="border border-slate-200 rounded-xl overflow-hidden">
+                    <div className="grid grid-cols-7 text-center bg-slate-50 font-bold text-[10px] py-1.5 border-b border-slate-200">
+                      <div className="text-red-500">일</div>
+                      <div>월</div>
+                      <div>화</div>
+                      <div>수</div>
+                      <div>목</div>
+                      <div>금</div>
+                      <div className="text-blue-500">토</div>
+                    </div>
+
+                    <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 bg-slate-50/20">
+                      {monthlyDays.map((day, idx) => {
+                        const isSunday = day.dayOfWeek === 0;
+                        const isSaturday = day.dayOfWeek === 6;
+                        const isHoliday = !!day.holidayName;
+                        const shift = day.shiftInfo.shift;
+
+                        let numColor = "text-slate-700";
+                        if (!day.isCurrentMonth) numColor = "text-slate-300";
+                        else if (day.isWorkout) numColor = "text-white font-bold";
+                        else if (isSunday || isHoliday) numColor = "text-red-500 font-bold";
+                        else if (isSaturday) numColor = "text-blue-500 font-bold";
+
+                        // 근무 미니 배지 색상
+                        let shiftBadgeBg = "bg-slate-100 text-slate-700";
+                        if (shift === '당직') shiftBadgeBg = "bg-blue-600 text-white";
+                        if (shift === '주간') shiftBadgeBg = "bg-amber-400 text-slate-900";
+                        if (shift === '비번') shiftBadgeBg = day.isWorkout ? "bg-rose-100 text-rose-800" : "bg-rose-50 text-rose-600 border border-rose-200";
+
+                        return (
+                          <div
+                            key={idx}
+                            className={`min-h-[64px] p-1 flex flex-col justify-between ${
+                              !day.isCurrentMonth 
+                                ? 'bg-slate-50/50' 
+                                : day.isWorkout 
+                                ? 'bg-[#1e3a8a]' 
+                                : 'bg-white'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between leading-none">
+                              <span className={`text-[10px] ${numColor}`}>{day.dayNum}</span>
+                              {day.workoutInfo && day.isCurrentMonth && (
+                                <span className="text-[9px]">{day.workoutInfo.icon}</span>
+                              )}
+                            </div>
+
+                            {/* 근무 텍스트 배지 */}
+                            <div className="my-0.5 flex justify-center">
+                              <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold leading-tight ${shiftBadgeBg}`}>
+                                {shift}
+                              </span>
+                            </div>
+
+                            {/* 등록된 일정 간략 표시 */}
+                            <div className="space-y-0.5 max-h-[22px] overflow-hidden">
+                              {day.dayEvents.slice(0, 1).map((evt) => (
+                                <div 
+                                  key={evt.id} 
+                                  className={`text-[8px] px-1 py-0.2 rounded truncate font-medium ${
+                                    day.isWorkout ? 'bg-white/95 text-slate-900' : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
+                                  }`}
+                                >
+                                  {evt.title}
+                                </div>
+                              ))}
+                              {day.dayEvents.length > 1 && (
+                                <div className="text-[7px] text-slate-400 text-right leading-none">+{day.dayEvents.length - 1}</div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[9px] text-slate-400 pt-1">
+                    <div className="flex items-center space-x-2">
+                      <span>● 파랑: 당직</span>
+                      <span>● 노랑: 주간</span>
+                      <span>● 분홍: 비번</span>
+                      <span>● 네이비: 운동</span>
+                    </div>
+                    <span>캡처하여 간편 공유</span>
+                  </div>
+                </div>
+              ) : (
+                /* 2. 날짜별 일정 목록 뷰 (텍스트 복사 및 스크롤 캡처용) */
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <div>
+                      <h4 className="text-base font-black text-slate-900">{year}년 {month}월 전체 일정 목록</h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">근무 및 등록된 모든 개인 일정</p>
+                    </div>
+                    <button
+                      onClick={handleCopyText}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-xs active:scale-95"
+                    >
+                      <i className={`fa-solid ${copySuccess ? 'fa-check' : 'fa-copy'}`}></i>
+                      <span>{copySuccess ? '복사 완료!' : '텍스트 복사'}</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
+                    {monthlyDays.filter(d => d.isCurrentMonth).map((day) => {
+                      const isSunday = day.dayOfWeek === 0;
+                      const isSaturday = day.dayOfWeek === 6;
+                      const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+                      const shift = day.shiftInfo.shift;
+
+                      let shiftColor = "bg-slate-100 text-slate-700";
+                      if (shift === '당직') shiftColor = "bg-blue-600 text-white";
+                      if (shift === '주간') shiftColor = "bg-amber-400 text-slate-900 font-bold";
+                      if (shift === '비번') shiftColor = "bg-rose-50 text-rose-600 border border-rose-200";
+
+                      return (
+                        <div
+                          key={day.dateStr}
+                          className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                            day.isWorkout ? 'bg-blue-50/50 border-blue-200' : 'bg-slate-50/60 border-slate-100'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <span className={`font-bold w-12 ${isSunday ? 'text-red-500' : isSaturday ? 'text-blue-500' : 'text-slate-800'}`}>
+                              {month}.{String(day.dayNum).padStart(2, '0')} ({dayNames[day.dayOfWeek]})
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${shiftColor}`}>
+                              {shift}
+                            </span>
+                            {day.holidayName && (
+                              <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.2 rounded">
+                                {day.holidayName}
+                              </span>
+                            )}
+                            {day.workoutInfo && (
+                              <span className="text-[10px] font-bold text-blue-900 bg-blue-100 px-1.5 py-0.2 rounded flex items-center space-x-0.5">
+                                <span>{day.workoutInfo.icon}</span>
+                                <span>{day.workoutInfo.label}</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="text-right">
+                            {day.dayEvents.length > 0 ? (
+                              day.dayEvents.map(e => (
+                                <span key={e.id} className="inline-block text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded ml-1">
+                                  {e.title} {e.time && `(${e.time})`}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[10px] text-slate-300">-</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 하단 닫기 안내 바 */}
+            <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 flex items-center justify-between text-xs shrink-0">
+              <span className="text-slate-400 text-[11px]">
+                💡 이 화면에서 <strong>휴대폰 스크린샷</strong>을 찍으면 한눈에 깔끔하게 공유됩니다.
+              </span>
+              <button
+                onClick={onClose}
+                className="px-4 py-1.5 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-900 transition"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
       );
     }
 
