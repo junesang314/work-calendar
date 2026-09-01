@@ -20,6 +20,8 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- html2canvas for instant image export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     body {
@@ -671,7 +673,7 @@
                                   <span>{evt.title}</span>
                                   {evt.time && <span className="text-[10px] text-emerald-700 font-bold bg-white/80 px-1.5 py-0.5 rounded border border-emerald-200/60">{evt.time}</span>}
                                 </div>
-                                {evt.note && <div className="text-[11px] text-emerald-800/80 leading-tight">{evt.note}</div>}
+                                {evt.note && <div className="text-[10px] text-emerald-700/80 leading-tight">{evt.note}</div>}
                               </div>
                             ))
                           ) : (
@@ -794,7 +796,7 @@
                     onMouseUp={handleHeaderTouchEnd}
                     onClick={handleHeaderClick}
                     className="cursor-pointer group flex items-center space-x-1.5 hover:opacity-80 transition select-none"
-                    title="터치: 12달 보기 / 길게 누르기: 캡처 및 공유"
+                    title="터치: 12달 보기 / 길게 누르기: 캡처 및 이미지 저장"
                   >
                     <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
                       {viewMode === 'yearly'
@@ -811,7 +813,7 @@
                     {viewMode === 'yearly'
                       ? '한 해 12달 전체 선택 (좌우 슬라이드로 연도 이동)'
                       : viewMode === 'monthly'
-                      ? '월간 근무 및 일정 (상단 연월 길게 누르면 캡처 공유 뷰)'
+                      ? '월간 근무 및 일정 (상단 연월 길게 누르면 이미지 저장 및 공유)'
                       : '주간 상세 스케줄 (좌우 슬라이드로 주 이동)'}
                   </p>
                 </div>
@@ -954,10 +956,10 @@
             </button>
           </div>
 
-          {/* 📌 하단 버전 표시 (기존 범례 영역 제거) */}
+          {/* 📌 하단 버전 표시 */}
           <div className="mt-8 mb-4 text-center select-none">
             <span className="text-[11px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-1 rounded-full border border-slate-200/60">
-              근무표 v1.2.0
+              근무표 v1.3.0
             </span>
           </div>
 
@@ -1008,7 +1010,7 @@
             />
           )}
 
-          {/* 📷 한눈에 보기 / 캡처 공유 모달 (상단 연월 롱프레스로 발동) */}
+          {/* 📷 한눈에 보기 / 이미지 저장 및 공유 모달 (상단 연월 롱프레스로 발동) */}
           {isShareModalOpen && (
             <ShareCaptureModal
               currDate={currDate}
@@ -1087,13 +1089,67 @@
       );
     }
 
-    // --- 📷 한눈에 보기 / 캡처 및 공유 전용 모달 ---
+    // --- 📷 한눈에 보기 / 자동 크롭 이미지 저장 및 공유 모달 ---
     function ShareCaptureModal({ currDate, monthlyDays, monthSummary, onClose }) {
       const [shareTab, setShareTab] = useState('calendar'); // 'calendar' | 'list'
       const [copySuccess, setCopySuccess] = useState(false);
+      const [isGenerating, setIsGenerating] = useState(false);
+      const cardRef = useRef(null);
 
       const year = currDate.getFullYear();
       const month = currDate.getMonth() + 1;
+
+      // 🖼️ 달력 카드 영역만 크롭해서 고화질 이미지로 즉시 저장/공유하는 함수
+      const handleSaveCroppedImage = async () => {
+        if (!cardRef.current || isGenerating) return;
+        setIsGenerating(true);
+
+        try {
+          const canvas = await html2canvas(cardRef.current, {
+            scale: 2.5, // 고화질 렌더링
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false
+          });
+
+          canvas.toBlob(async (blob) => {
+            if (!blob) {
+              setIsGenerating(false);
+              return;
+            }
+
+            const fileName = `${year}년_${month}월_근무표.png`;
+            const file = new File([blob], fileName, { type: 'image/png' });
+
+            // 1. 모바일 브라우저 네이티브 공유창 (아이폰 사진첩 저장, 카카오톡 즉시 전송 등 지원)
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              try {
+                await navigator.share({
+                  files: [file],
+                  title: `${year}년 ${month}월 근무표`
+                });
+              } catch (err) {
+                // 사용자가 공유창을 취소한 경우 무시
+              }
+            } else {
+              // 2. PC 또는 미지원 브라우저: 자동 다운로드
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = fileName;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }
+            setIsGenerating(false);
+          }, 'image/png');
+        } catch (error) {
+          console.error('Image capture failed:', error);
+          alert('이미지 생성에 실패했습니다. 다시 시도해주세요.');
+          setIsGenerating(false);
+        }
+      };
 
       // 텍스트 복사 생성
       const generateTextSummary = () => {
@@ -1142,7 +1198,21 @@
                 <i className="fa-solid fa-calendar-check text-indigo-400"></i>
                 <h3 className="text-sm font-bold">{year}년 {month}월 스케줄</h3>
               </div>
+
               <div className="flex items-center space-x-2">
+                {/* 🌟 원터치 깔끔 이미지 저장 버튼 */}
+                {shareTab === 'calendar' && (
+                  <button
+                    onClick={handleSaveCroppedImage}
+                    disabled={isGenerating}
+                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition flex items-center space-x-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                    title="크롭할 필요 없이 달력만 이미지로 저장"
+                  >
+                    <i className={`fa-solid ${isGenerating ? 'fa-spinner fa-spin' : 'fa-image'}`}></i>
+                    <span>{isGenerating ? '생성중...' : '이미지 저장'}</span>
+                  </button>
+                )}
+
                 <div className="bg-slate-800 p-0.5 rounded-lg flex text-[11px] font-semibold">
                   <button
                     onClick={() => setShareTab('calendar')}
@@ -1171,8 +1241,11 @@
             <div className="p-3 sm:p-4 overflow-y-auto custom-scrollbar">
               
               {shareTab === 'calendar' ? (
-                /* 1. 모바일 1화면에 쏙 들어오는 초컴팩트 캡처용 달력 카드 */
-                <div className="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200 space-y-2.5">
+                /* 1. 모바일 1화면에 쏙 들어오는 초컴팩트 캡처용 달력 카드 (ref 연결) */
+                <div 
+                  ref={cardRef}
+                  className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-2.5"
+                >
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                     <div>
                       <h4 className="text-base font-black text-slate-900">{year}년 {month}월 스케줄</h4>
