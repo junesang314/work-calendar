@@ -395,6 +395,7 @@
         };
       };
 
+      // 📌 9월 같은 달에 5주(35일)인 달은 6주(42일) 빈 줄이 안 생기도록 딱 5주만 렌더링하도록 최적화!
       const getMonthlyDays = (targetDate) => {
         const y = targetDate.getFullYear();
         const m = targetDate.getMonth();
@@ -404,15 +405,13 @@
         const startDate = new Date(firstDay);
         startDate.setDate(startDate.getDate() - startDate.getDay());
 
-        const endDate = new Date(lastDay);
-        if (endDate.getDay() !== 6) {
-          endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
-        }
+        // 9월 같은 경우 5주(35일)로 끝나는지 확인하여 불필요한 6번째 주 빈 행 원천 차단
+        const totalDaysNeeded = (lastDay.getDate() + firstDay.getDay() > 35) ? 42 : 35;
 
         const days = [];
         let curr = new Date(startDate);
 
-        while (curr <= endDate) {
+        for (let i = 0; i < totalDaysNeeded; i++) {
           const info = getDayInfo(curr);
           info.isCurrentMonth = curr.getMonth() === m;
           days.push(info);
@@ -523,7 +522,7 @@
                       onMouseDown={() => handleCellTouchStart(day)}
                       onMouseUp={handleCellTouchEnd}
                       onClick={() => handleCellClick(day)}
-                      className={`min-h-[115px] sm:min-h-[135px] p-1.5 sm:p-2 transition cursor-pointer flex flex-col justify-between group hover:brightness-95 active:scale-[0.99] ${cellBgStyle} ${
+                      className={`min-h-[82px] sm:min-h-[96px] p-1 sm:p-1.5 transition cursor-pointer flex flex-col justify-between group hover:brightness-95 active:scale-[0.99] ${cellBgStyle} ${
                         day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""
                       }`}
                     >
@@ -535,7 +534,7 @@
                           {/* 운동 배지 */}
                           {day.workoutInfo && day.isCurrentMonth && (
                             <span 
-                              className="text-[11px] bg-[#142862] text-white border border-blue-300/40 rounded-md px-1 py-0.2 font-bold shadow-xs flex items-center justify-center"
+                              className="text-[10px] bg-[#142862] text-white border border-blue-300/40 rounded px-1 py-0.2 font-bold shadow-xs flex items-center justify-center"
                               title={day.workoutInfo.label}
                             >
                               {day.workoutInfo.icon}
@@ -544,7 +543,7 @@
                         </div>
 
                         {day.holidayName && day.isCurrentMonth && (
-                          <div className={`text-[9.5px] font-semibold truncate leading-tight mt-0.5 ${
+                          <div className={`text-[9px] font-semibold truncate leading-tight mt-0.5 ${
                             day.isWorkout ? 'text-rose-200 font-bold' : 'text-red-500'
                           }`}>
                             {day.holidayName}
@@ -552,7 +551,7 @@
                         )}
                       </div>
 
-                      <div className="my-1 flex flex-col items-center justify-center">
+                      <div className="my-0.5 flex flex-col items-center justify-center">
                         <ShiftBadge 
                           info={day.shiftInfo} 
                           isDarkBg={day.isWorkout && day.isCurrentMonth} 
@@ -560,24 +559,24 @@
                       </div>
 
                       {/* 등록된 일정 목록 */}
-                      <div className="space-y-0.5 mt-auto max-h-[42px] overflow-hidden">
+                      <div className="space-y-0.5 mt-auto max-h-[28px] overflow-hidden">
                         {day.dayEvents.slice(0, 1).map((evt) => (
                           <div
                             key={evt.id}
-                            className={`text-[9.5px] px-1 py-0.5 rounded truncate font-semibold flex items-center justify-between shadow-2xs border ${
+                            className={`text-[8.5px] px-1 py-0.2 rounded truncate font-semibold flex items-center justify-between shadow-2xs border ${
                               day.isWorkout 
                                 ? "bg-white/95 text-slate-900 border-blue-200" 
                                 : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200/80"
                             }`}
                           >
                             <span className="truncate">{evt.title}</span>
-                            {evt.time && <span className={`text-[8.5px] pl-1 shrink-0 font-bold ${
+                            {evt.time && <span className={`text-[7.5px] pl-0.5 shrink-0 font-bold ${
                               day.isWorkout ? 'text-blue-800' : 'text-emerald-700'
                             }`}>{evt.time}</span>}
                           </div>
                         ))}
                         {day.dayEvents.length > 1 && (
-                          <div className={`text-[7.5px] text-right font-bold leading-none ${day.isWorkout ? 'text-blue-200' : 'text-slate-400'}`}>
+                          <div className={`text-[7px] text-right font-bold leading-none ${day.isWorkout ? 'text-blue-200' : 'text-slate-400'}`}>
                             +{day.dayEvents.length - 1}
                           </div>
                         )}
@@ -784,7 +783,7 @@
       return (
         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-3 sm:py-5">
           {/* 상단 헤더 */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3.5 sm:p-5 mb-3">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3.5 sm:p-5 mb-2.5">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               
               <div className="flex items-center space-x-3">
@@ -876,7 +875,7 @@
 
             {/* 📌 상단 요약 바: 근무 통계만 깔끔하게 표시 */}
             {viewMode === 'monthly' && (
-              <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center space-x-2 text-xs font-semibold overflow-x-auto">
+              <div className="mt-2 pt-2 border-t border-slate-100 flex items-center space-x-2 text-xs font-semibold overflow-x-auto">
                 <span className="text-slate-400 font-normal mr-1">이번달 근무:</span>
                 <div className="flex items-center space-x-1 bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-100">
                   <span className="w-2 h-2 rounded-full bg-blue-600"></span>
@@ -929,14 +928,14 @@
             </div>
           </div>
 
-          {/* 🏃🏋️ 하단 와이드 운동 기록 통계 카드 (총운동 칸 줄이고 크로스핏 칸 늘림) */}
-          <div className="mt-2.5 bg-white rounded-2xl p-3 sm:p-3.5 shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 select-none">
+          {/* 🏃🏋️ 하단 와이드 운동 기록 통계 카드 (총운동 칸 줄이고 크로스핏 칸 늘림 + 폰트 줄바꿈 방지) */}
+          <div className="mt-2 bg-white rounded-2xl p-2.5 sm:p-3 shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 select-none">
             <div className="flex items-center space-x-2.5 w-full sm:w-auto">
-              <div className="w-9 h-9 rounded-xl bg-[#1e3a8a] text-white flex items-center justify-center text-base shadow-xs shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-[#1e3a8a] text-white flex items-center justify-center text-sm shadow-xs shrink-0">
                 💪
               </div>
               <div>
-                <div className="text-xs sm:text-sm font-bold text-slate-800 flex items-center space-x-1.5">
+                <div className="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
                   <span>이번 달 운동 통계</span>
                   <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.2 rounded-full font-bold">Total {monthSummary.총운동}회</span>
                 </div>
@@ -944,16 +943,16 @@
               </div>
             </div>
 
-            <div className="flex items-center space-x-1.5 w-full sm:w-auto">
-              <div className="flex items-center space-x-1 bg-blue-50/80 text-blue-900 px-2.5 py-1.5 rounded-xl border border-blue-100 text-xs font-bold flex-1 sm:flex-none justify-center">
+            <div className="flex items-center space-x-1.5 w-full sm:w-auto whitespace-nowrap">
+              <div className="flex items-center space-x-1 bg-blue-50/80 text-blue-900 px-2 py-1.5 rounded-xl border border-blue-100 text-xs font-bold flex-1 sm:flex-none justify-center">
                 <span>🏃 달리기</span>
                 <span className="text-blue-600 font-extrabold text-sm pl-0.5">{monthSummary.달리기}</span>
               </div>
-              <div className="flex items-center space-x-1 bg-indigo-50/80 text-indigo-900 px-3 py-1.5 rounded-xl border border-indigo-100 text-xs font-bold flex-[1.4] sm:flex-none justify-center">
+              <div className="flex items-center space-x-1 bg-indigo-50/80 text-indigo-900 px-2 py-1.5 rounded-xl border border-indigo-100 text-xs font-bold flex-[1.3] sm:flex-none justify-center">
                 <span>🏋️ 크로스핏</span>
                 <span className="text-indigo-600 font-extrabold text-sm pl-0.5">{monthSummary.크로스핏}</span>
               </div>
-              <div className="flex items-center space-x-1 bg-[#1e3a8a] text-white px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-xs flex-1 sm:flex-none justify-center">
+              <div className="flex items-center space-x-1 bg-[#1e3a8a] text-white px-2 py-1.5 rounded-xl text-xs font-bold shadow-xs flex-1 sm:flex-none justify-center">
                 <span>총 운동</span>
                 <span className="text-blue-200 font-black text-sm pl-0.5">{monthSummary.총운동}</span>
               </div>
@@ -961,9 +960,9 @@
           </div>
 
           {/* 📌 하단 버전 표시 */}
-          <div className="mt-2.5 mb-2 text-center select-none">
+          <div className="mt-2 mb-1 text-center select-none">
             <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">
-              근무표 v1.5.2
+              근무표 v1.5.3
             </span>
           </div>
 
@@ -1089,7 +1088,7 @@
               주
             </span>
             {isOverride && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-600 border border-white rounded-full" title="수동 수정됨"></span>
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-600 border-white rounded-full" title="수동 수정됨"></span>
             )}
           </div>
         );
@@ -1444,507 +1443,9 @@
       );
     }
 
-    function MiniRoundShiftBadge({ shift, isDarkBg }) {
-      if (shift === '당직') {
-        return (
-          <svg width="22" height="22" viewBox="0 0 22 22">
-            <circle cx="11" cy="11" r="10" fill="#2563eb" stroke={isDarkBg ? "#60a5fa" : "none"} strokeWidth="1" />
-            <text x="11" y="14.5" textAnchor="middle" fill="#ffffff" fontSize="10.5" fontWeight="700" fontFamily="Pretendard, sans-serif">당</text>
-          </svg>
-        );
-      }
-      if (shift === '주간') {
-        return (
-          <svg width="22" height="22" viewBox="0 0 22 22">
-            <circle cx="11" cy="11" r="10" fill="#fbbf24" />
-            <text x="11" y="14.5" textAnchor="middle" fill="#0f172a" fontSize="10.5" fontWeight="700" fontFamily="Pretendard, sans-serif">주</text>
-          </svg>
-        );
-      }
-      if (shift === '비번') {
-        return (
-          <svg width="22" height="22" viewBox="0 0 22 22">
-            <circle cx="11" cy="11" r="10" fill={isDarkBg ? "#ffe4e6" : "#fff1f2"} stroke={isDarkBg ? "#f43f5e" : "#fecdd3"} strokeWidth="1" />
-            <text x="11" y="14.5" textAnchor="middle" fill={isDarkBg ? "#9f1239" : "#e11d48"} fontSize="10.5" fontWeight="700" fontFamily="Pretendard, sans-serif">비</text>
-          </svg>
-        );
-      }
-      return (
-        <svg width="22" height="22" viewBox="0 0 22 22">
-          <circle cx="11" cy="11" r="10" fill="#f1f5f9" />
-          <text x="11" y="14.5" textAnchor="middle" fill="#334155" fontSize="10.5" fontWeight="700" fontFamily="Pretendard, sans-serif">{shift.substring(0, 1)}</text>
-        </svg>
-      );
-    }
-
-    function QuickPreviewPopup({ dayInfo, workoutInfo, onSelectWorkout, onClose, onOpenDetail }) {
-      const { dateStr, holidayName, shiftInfo, dayEvents, dayOfWeek } = dayInfo;
-      const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dayOfWeek];
-
-      const shift = shiftInfo.shift;
-      let badgeColor = "bg-slate-800 text-white";
-      if (shift === '당직') badgeColor = "bg-blue-600 text-white";
-      if (shift === '주간') badgeColor = "bg-amber-400 text-slate-900";
-      if (shift === '비번') badgeColor = "bg-rose-500 text-white";
-
-      return (
-        <div 
-          onClick={onClose}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-150"
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-2xl max-w-xs w-full overflow-hidden border border-slate-100 p-4 space-y-3.5 transform transition-all scale-100 animate-in zoom-in-95 duration-150"
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <div>
-                <div className="flex items-center space-x-1.5">
-                  <h4 className="text-base font-bold text-slate-800">{dateStr} ({dayOfWeekKorean})</h4>
-                  {holidayName && (
-                    <span className="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">{holidayName}</span>
-                  )}
-                </div>
-                <div className="text-[11px] text-slate-400 mt-0.5 flex items-center space-x-1.5">
-                  <span>근무:</span>
-                  <span className={`px-2 py-0.5 rounded-md font-bold text-xs ${badgeColor}`}>{shift}</span>
-                </div>
-              </div>
-              <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
-                <i className="fa-solid fa-xmark text-base"></i>
-              </button>
-            </div>
-
-            {/* 운동 선택 바 */}
-            <div>
-              <div className="text-[11px] font-bold text-slate-500 mb-1.5 flex items-center justify-between">
-                <span>오늘의 운동</span>
-                {workoutInfo && (
-                  <button 
-                    onClick={() => onSelectWorkout(null)} 
-                    className="text-[10px] text-rose-500 hover:underline font-semibold"
-                  >
-                    기록 취소
-                  </button>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => onSelectWorkout('running')}
-                  className={`py-2 px-3 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 border shadow-2xs ${
-                    workoutInfo?.type === 'running'
-                      ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] ring-2 ring-blue-400'
-                      : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                  }`}
-                >
-                  <span className="text-base">🏃</span>
-                  <span>달리기 {workoutInfo?.type === 'running' && '✓'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onSelectWorkout('crossfit')}
-                  className={`py-2 px-3 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 border shadow-2xs ${
-                    workoutInfo?.type === 'crossfit'
-                      ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] ring-2 ring-blue-400'
-                      : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                  }`}
-                >
-                  <span className="text-base">🏋️</span>
-                  <span>크로스핏 {workoutInfo?.type === 'crossfit' && '✓'}</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-              <div className="text-xs font-bold text-slate-500 flex items-center justify-between">
-                <span>등록된 일정 ({dayEvents.length})</span>
-              </div>
-              {dayEvents.length > 0 ? (
-                dayEvents.map((evt) => (
-                  <div key={evt.id} className="p-2.5 bg-emerald-50/80 border border-emerald-200/80 rounded-xl space-y-0.5">
-                    <div className="font-bold text-xs text-emerald-950 flex items-center justify-between">
-                      <span>{evt.title}</span>
-                      {evt.time && <span className="text-[10px] bg-white px-1.5 py-0.5 rounded text-emerald-700 font-bold border border-emerald-200/60">{evt.time}</span>}
-                    </div>
-                    {evt.note && <div className="text-[11px] text-emerald-800/80 leading-tight">{evt.note}</div>}
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-slate-400 text-center py-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                  등록된 일정이 없습니다.
-                </p>
-              )}
-            </div>
-
-            <div className="pt-1 flex space-x-2">
-              <button
-                onClick={onOpenDetail}
-                className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition shadow-xs flex items-center justify-center space-x-1.5"
-              >
-                <i className="fa-solid fa-pen-to-square text-[11px]"></i>
-                <span>일정 등록 / 상세 수정</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // --- 📌 날짜 상세 모달 ---
-    function DateDetailModal({
-      dateStr,
-      workoutInfo,
-      onSelectWorkout,
-      onClose,
-      settings,
-      overrideShift,
-      onSetOverride,
-      events,
-      onAddEvent,
-      onDeleteEvent
-    }) {
-      const autoCalculated = calculateAutoShift(dateStr, settings);
-      const currentShift = overrideShift || autoCalculated.shift;
-      const isManual = !!overrideShift;
-
-      const [title, setTitle] = useState('');
-      const [time, setTime] = useState('');
-      const [note, setNote] = useState('');
-
-      const handleAddEventSubmit = (e) => {
-        e.preventDefault();
-        if (!title.trim()) return;
-        onAddEvent({
-          id: Date.now().toString(),
-          title: title.trim(),
-          time,
-          note
-        });
-        setTitle('');
-        setTime('');
-        setNote('');
-      };
-
-      const dateObj = new Date(dateStr + 'T00:00:00');
-      const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dateObj.getDay()];
-      const holidayName = getHolidayName(dateStr);
-
-      return (
-        <div 
-          onClick={onClose}
-          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 my-auto flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150"
-          >
-            {/* 헤더 */}
-            <div className="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between shrink-0">
-              <div>
-                <div className="flex items-center space-x-2">
-                  <h3 className="text-base sm:text-lg font-bold">
-                    {dateStr} ({dayOfWeekKorean})
-                  </h3>
-                  {holidayName && (
-                    <span className="bg-red-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                      {holidayName}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-300 mt-0.5">근무 수정, 운동 종류 선택 및 일정 관리</p>
-              </div>
-              <button 
-                onClick={onClose} 
-                className="p-1.5 hover:bg-slate-800 rounded-xl text-slate-300 hover:text-white transition"
-                title="닫기"
-              >
-                <i className="fa-solid fa-xmark text-lg"></i>
-              </button>
-            </div>
-
-            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
-              {/* 1. 운동 종류 선택 영역 */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    오늘의 운동 기록
-                  </label>
-                  {workoutInfo && (
-                    <button 
-                      onClick={() => onSelectWorkout(null)} 
-                      className="text-[11px] text-rose-500 hover:underline font-semibold"
-                    >
-                      기록 취소
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onSelectWorkout('running')}
-                    className={`p-2.5 sm:p-3 rounded-2xl border transition flex items-center space-x-2.5 ${
-                      workoutInfo?.type === 'running'
-                        ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm ring-2 ring-blue-400'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span className="text-2xl">🏃</span>
-                    <div className="text-left">
-                      <div className="font-bold text-xs">달리기</div>
-                      <div className={`text-[10px] ${workoutInfo?.type === 'running' ? 'text-blue-200' : 'text-slate-400'}`}>
-                        {workoutInfo?.type === 'running' ? '선택 완료됨' : '러닝 기록'}
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => onSelectWorkout('crossfit')}
-                    className={`p-2.5 sm:p-3 rounded-2xl border transition flex items-center space-x-2.5 ${
-                      workoutInfo?.type === 'crossfit'
-                        ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm ring-2 ring-blue-400'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span className="text-2xl">🏋️</span>
-                    <div className="text-left">
-                      <div className="font-bold text-xs">크로스핏</div>
-                      <div className={`text-[10px] ${workoutInfo?.type === 'crossfit' ? 'text-blue-200' : 'text-slate-400'}`}>
-                        {workoutInfo?.type === 'crossfit' ? '선택 완료됨' : '역도/와드 기록'}
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <hr className="border-slate-100" />
-
-              {/* 2. 근무 설정 영역 */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  오늘의 근무 설정
-                </label>
-
-                <div className="bg-slate-50 rounded-xl p-2.5 mb-2.5 border border-slate-200/80 flex items-center justify-between text-xs">
-                  <div>
-                    <span className="text-slate-500">자동 스케줄: </span>
-                    <span className="font-bold text-slate-800">{autoCalculated.shift}</span>
-                    {autoCalculated.isRuleModified && (
-                      <span className="text-red-500 font-medium ml-1">({autoCalculated.reason} 비번)</span>
-                    )}
-                  </div>
-                  {isManual ? (
-                    <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                      수동 변경됨
-                    </span>
-                  ) : (
-                    <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                      자동 적용중
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
-                  {['주간', '당직', '비번', '연차'].map((shiftOpt) => {
-                    const isSelected = currentShift === shiftOpt;
-                    return (
-                      <button
-                        key={shiftOpt}
-                        onClick={() => onSetOverride(shiftOpt)}
-                        className={`py-2 px-2 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center space-y-0.5 ${
-                          isSelected
-                            ? "bg-slate-800 text-white border-slate-800 shadow-sm"
-                            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                        }`}
-                      >
-                        <span>{shiftOpt}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {isManual && (
-                  <button
-                    onClick={() => onSetOverride(null)}
-                    className="mt-2 text-xs text-blue-600 hover:underline font-medium flex items-center space-x-1"
-                  >
-                    <i className="fa-solid fa-rotate-left text-[10px]"></i>
-                    <span>기본 자동 스케줄로 복원</span>
-                  </button>
-                )}
-              </div>
-
-              <hr className="border-slate-100" />
-
-              {/* 3. 개인 일정 등록/목록 영역 */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  개인 일정 ({events.length})
-                </label>
-
-                {events.length > 0 ? (
-                  <div className="space-y-1.5 mb-3 max-h-32 overflow-y-auto custom-scrollbar">
-                    {events.map((evt) => (
-                      <div key={evt.id} className="p-2 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between text-xs">
-                        <div>
-                          <div className="font-bold text-emerald-950">{evt.title}</div>
-                          {evt.time && <div className="text-emerald-700 font-semibold text-[10.5px]">{evt.time}</div>}
-                          {evt.note && <div className="text-emerald-800/80 text-[10.5px] mt-0.5">{evt.note}</div>}
-                        </div>
-                        <button
-                          onClick={() => onDeleteEvent(evt.id)}
-                          className="text-slate-400 hover:text-red-500 p-1 transition"
-                          title="일정 삭제"
-                        >
-                          <i className="fa-regular fa-trash-can"></i>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400 mb-3 text-center py-2 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                    등록된 개인 일정이 없습니다.
-                  </p>
-                )}
-
-                <form onSubmit={handleAddEventSubmit} className="space-y-2 bg-slate-50/70 p-3 rounded-2xl border border-slate-200">
-                  <div className="text-xs font-bold text-slate-700">새 일정 추가</div>
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      placeholder="일정 제목 (예: 치과 예약)"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                    <input
-                      type="time"
-                      value={time}
-                      onChange={(e) => setTime(e.target.value)}
-                      className="w-24 px-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="메모 (선택사항)"
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    type="submit"
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition shadow-xs"
-                  >
-                    일정 등록하기
-                  </button>
-                </form>
-              </div>
-            </div>
-
-            <div className="bg-slate-50 px-5 py-3 border-t border-slate-100 flex justify-end shrink-0">
-              <button
-                onClick={onClose}
-                className="px-4 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded-xl hover:bg-slate-900 transition"
-              >
-                닫기
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    function SettingsModal({ settings, onSave, onClose }) {
-      const [anchorDate, setAnchorDate] = useState(settings.anchorDate);
-      const [anchorShift, setAnchorShift] = useState(settings.anchorShift);
-
-      const handleSubmit = (e) => {
-        e.preventDefault();
-        onSave({ anchorDate, anchorShift });
-      };
-
-      return (
-        <div 
-          onClick={onClose}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-3xl shadow-xl max-w-sm w-full overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-150"
-          >
-            <div className="bg-slate-800 text-white px-5 py-4 flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <i className="fa-solid fa-sliders text-blue-400"></i>
-                <h3 className="text-base font-bold">스케줄 기준 패턴 설정</h3>
-              </div>
-              <button onClick={onClose} className="p-1 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition">
-                <i className="fa-solid fa-xmark text-lg"></i>
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-800 leading-relaxed">
-                <p className="font-semibold mb-1">💡 교대 패턴 작동 규칙</p>
-                <p>
-                  설정한 <strong>기준일</strong>의 근무부터 시작하여 <br />
-                  <span className="font-bold text-blue-900">주간 ➔ 당직 ➔ 비번</span> 순서로 3일 주기가 순환합니다.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  스케줄 시작 기준일
-                </label>
-                <input
-                  type="date"
-                  value={anchorDate}
-                  onChange={(e) => setAnchorDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  기준일의 근무
-                </label>
-                <select
-                  value={anchorShift}
-                  onChange={(e) => setAnchorShift(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  <option value="당직">당직</option>
-                  <option value="주간">주간</option>
-                  <option value="비번">비번</option>
-                </select>
-              </div>
-
-              <div className="pt-2 flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl hover:bg-slate-50 transition"
-                >
-                  취소
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition shadow-sm"
-                >
-                  설정 저장
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      );
-    }
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    const root = ReactDOM.createRoot(rootElementId_or_domNode = document.getElementById('root'));
+    // Wait, let's make sure ReactDOM.createRoot is correct:
+    // ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
