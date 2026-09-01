@@ -959,7 +959,7 @@
           {/* 📌 하단 버전 표시 */}
           <div className="mt-8 mb-4 text-center select-none">
             <span className="text-[11px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-1 rounded-full border border-slate-200/60">
-              근무표 v1.4.0
+              근무표 v1.4.1
             </span>
           </div>
 
@@ -1089,7 +1089,7 @@
       );
     }
 
-    // --- 📷 한눈에 보기 / 전체 배경색 타일 방식 캡처 모달 (글자 잘림 100% 방지) ---
+    // --- 📷 메인 달력과 100% 동일한 고급 원형 배지 기반의 캡처 뷰 (v1.4.1) ---
     function ShareCaptureModal({ currDate, monthlyDays, monthSummary, onClose }) {
       const [shareTab, setShareTab] = useState('calendar'); // 'calendar' | 'list'
       const [copySuccess, setCopySuccess] = useState(false);
@@ -1099,7 +1099,7 @@
       const year = currDate.getFullYear();
       const month = currDate.getMonth() + 1;
 
-      // 🖼️ 달력 카드 영역만 크롭해서 완벽한 타일 이미지로 저장/공유
+      // 🖼️ 메인 달력의 프리미엄 감성 그대로 깔끔하게 이미지 저장
       const handleSaveCroppedImage = async () => {
         if (!cardRef.current || isGenerating) return;
         setIsGenerating(true);
@@ -1110,7 +1110,7 @@
           }
 
           const canvas = await html2canvas(cardRef.current, {
-            scale: 3, // 초고화질
+            scale: 2.5,
             useCORS: true,
             backgroundColor: '#ffffff',
             logging: false
@@ -1202,7 +1202,7 @@
               </div>
 
               <div className="flex items-center space-x-2">
-                {/* 🌟 원터치 이미지 저장 버튼 */}
+                {/* 🌟 원터치 깔끔 이미지 저장 버튼 */}
                 {shareTab === 'calendar' && (
                   <button
                     onClick={handleSaveCroppedImage}
@@ -1243,23 +1243,23 @@
             <div className="p-3 sm:p-4 overflow-y-auto custom-scrollbar">
               
               {shareTab === 'calendar' ? (
-                /* 1. 🌟 날짜 칸 전체를 근무 색상 타일로 채운 완벽한 캡처 카드 */
+                /* 1. 🌟 메인 달력과 동일한 고품격 화이트 + 원형 배지 캡처 카드 */
                 <div 
                   ref={cardRef}
                   className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3"
                 >
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                     <div>
-                      <h4 className="text-base font-black text-slate-900">{year}년 {month}월 스케줄</h4>
-                      <p className="text-[10px] text-slate-400 mt-0.5">당직 {monthSummary.당직}회 · 주간 {monthSummary.주간}회 · 비번 {monthSummary.비번}회 · 운동 {monthSummary.총운동}회</p>
+                      <h4 className="text-base font-black text-slate-900 tracking-tight">{year}년 {month}월 스케줄</h4>
+                      <p className="text-[10.5px] text-slate-400 font-medium mt-0.5">당직 {monthSummary.당직}회 · 주간 {monthSummary.주간}회 · 비번 {monthSummary.비번}회 · 운동 {monthSummary.총운동}회</p>
                     </div>
-                    <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md border border-indigo-100">
+                    <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-100">
                       근무표
                     </span>
                   </div>
 
-                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-                    <div className="grid grid-cols-7 text-center bg-slate-100 font-bold text-[10px] py-1.5 border-b border-slate-200 text-slate-600">
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                    <div className="grid grid-cols-7 text-center bg-slate-50/80 font-bold text-[11px] py-2 border-b border-slate-200 text-slate-600">
                       <div className="text-red-500">일</div>
                       <div>월</div>
                       <div>화</div>
@@ -1269,64 +1269,37 @@
                       <div className="text-blue-500">토</div>
                     </div>
 
-                    <div className="grid grid-cols-7 divide-x divide-y divide-white/60 bg-slate-100">
+                    <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 bg-white">
                       {monthlyDays.map((day, idx) => {
                         const isSunday = day.dayOfWeek === 0;
                         const isSaturday = day.dayOfWeek === 6;
                         const isHoliday = !!day.holidayName;
                         const shift = day.shiftInfo.shift;
 
-                        // 🎨 칸 전체 배경색 및 텍스트 색상 결정
-                        let cellBg = "#ffffff";
-                        let numColor = "#1e293b";
-                        let shiftColor = "#475569";
-                        let isDark = false;
+                        let numColor = "text-slate-800";
+                        if (!day.isCurrentMonth) numColor = "text-slate-300";
+                        else if (day.isWorkout) {
+                          if (isSunday || isHoliday) numColor = "text-rose-200 font-black";
+                          else if (isSaturday) numColor = "text-sky-200 font-black";
+                          else numColor = "text-white font-black";
+                        } else if (isSunday || isHoliday) numColor = "text-red-500 font-bold";
+                        else if (isSaturday) numColor = "text-blue-500 font-bold";
 
+                        let cellBgStyle = "bg-white";
                         if (!day.isCurrentMonth) {
-                          cellBg = "#f8fafc";
-                          numColor = "#cbd5e1";
-                          shiftColor = "#cbd5e1";
+                          cellBgStyle = "bg-slate-50/40";
                         } else if (day.isWorkout) {
-                          // 운동한 날: 딥 클래식 네이비
-                          cellBg = "#1e3a8a";
-                          numColor = "#ffffff";
-                          shiftColor = "#bfdbfe";
-                          isDark = true;
-                        } else if (shift === '당직') {
-                          // 당직: 선명한 로열 블루
-                          cellBg = "#2563eb";
-                          numColor = "#ffffff";
-                          shiftColor = "#ffffff";
-                          isDark = true;
-                        } else if (shift === '주간') {
-                          // 주간: 밝고 화사한 앰버 옐로우
-                          cellBg = "#fef3c7";
-                          numColor = "#92400e";
-                          shiftColor = "#b45309";
-                        } else if (shift === '비번') {
-                          // 비번: 은은한 로즈 핑크
-                          cellBg = "#ffe4e6";
-                          numColor = isSunday || isHoliday ? "#e11d48" : isSaturday ? "#2563eb" : "#881337";
-                          shiftColor = "#be123c";
-                        }
-
-                        if (day.isCurrentMonth && !isDark) {
-                          if (isSunday || isHoliday) numColor = "#e11d48";
-                          else if (isSaturday) numColor = "#2563eb";
+                          cellBgStyle = "bg-[#1e3a8a]";
                         }
 
                         return (
                           <div
                             key={idx}
-                            style={{ backgroundColor: cellBg }}
-                            className="min-h-[66px] p-1.5 flex flex-col justify-between transition"
+                            className={`min-h-[72px] p-1.5 flex flex-col justify-between ${cellBgStyle}`}
                           >
-                            {/* 상단: 날짜 숫자 + 운동 아이콘 */}
+                            {/* 상단: 날짜 숫자 + 운동 배지 */}
                             <div className="flex items-start justify-between leading-none">
-                              <span 
-                                style={{ color: numColor }}
-                                className="text-[11px] font-black"
-                              >
+                              <span className={`text-[11px] font-bold ${numColor}`}>
                                 {day.dayNum}
                               </span>
                               {day.workoutInfo && day.isCurrentMonth && (
@@ -1336,34 +1309,32 @@
                               )}
                             </div>
 
-                            {/* 중앙: 큼직하고 시원한 근무 텍스트 (배지 없이 칸 전체 일체형) */}
-                            <div className="my-auto py-0.5 text-center">
+                            {/* 중앙: 100% 잘림 없는 완벽한 원형 근무 배지 */}
+                            <div className="my-auto py-1 flex items-center justify-center">
                               {day.isCurrentMonth && (
-                                <div 
-                                  style={{ color: shiftColor }}
-                                  className="text-[12.5px] font-black tracking-tight leading-none"
-                                >
-                                  {shift}
-                                </div>
+                                <MiniRoundShiftBadge 
+                                  shift={shift} 
+                                  isDarkBg={day.isWorkout} 
+                                />
                               )}
                             </div>
 
                             {/* 하단: 등록된 일정 */}
-                            <div className="min-h-[14px] flex flex-col justify-end">
+                            <div className="min-h-[14px] flex flex-col justify-end space-y-0.5">
                               {day.dayEvents.slice(0, 1).map((evt) => (
                                 <div 
                                   key={evt.id} 
-                                  className={`text-[8.5px] px-1 py-0.2 rounded truncate font-bold leading-tight shadow-2xs ${
-                                    isDark 
+                                  className={`text-[8px] px-1 py-0.2 rounded truncate font-semibold leading-tight shadow-2xs ${
+                                    day.isWorkout 
                                       ? 'bg-white/95 text-slate-900' 
-                                      : 'bg-white/90 text-slate-800 border border-slate-200/80'
+                                      : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
                                   }`}
                                 >
                                   {evt.title}
                                 </div>
                               ))}
                               {day.dayEvents.length > 1 && (
-                                <div className={`text-[7.5px] font-bold text-right leading-none ${isDark ? 'text-blue-200' : 'text-slate-500'}`}>
+                                <div className={`text-[7px] font-bold text-right leading-none ${day.isWorkout ? 'text-blue-200' : 'text-slate-400'}`}>
                                   +{day.dayEvents.length - 1}
                                 </div>
                               )}
@@ -1450,6 +1421,40 @@
             </div>
           </div>
         </div>
+      );
+    }
+
+    // --- 캡처 전용 SVG 기반 미니 원형 배지 (HTML2Canvas 텍스트 잘림 절대 없음) ---
+    function MiniRoundShiftBadge({ shift, isDarkBg }) {
+      if (shift === '당직') {
+        return (
+          <svg width="22" height="22" viewBox="0 0 22 22">
+            <circle cx="11" cy="11" r="10" fill="#2563eb" stroke={isDarkBg ? "#60a5fa" : "none"} strokeWidth="1" />
+            <text x="11" y="14.5" textAnchor="middle" fill="#ffffff" fontSize="10.5" fontWeight="700" fontFamily="Pretendard, sans-serif">당</text>
+          </svg>
+        );
+      }
+      if (shift === '주간') {
+        return (
+          <svg width="22" height="22" viewBox="0 0 22 22">
+            <circle cx="11" cy="11" r="10" fill="#fbbf24" />
+            <text x="11" y="14.5" textAnchor="middle" fill="#0f172a" fontSize="10.5" fontWeight="700" fontFamily="Pretendard, sans-serif">주</text>
+          </svg>
+        );
+      }
+      if (shift === '비번') {
+        return (
+          <svg width="22" height="22" viewBox="0 0 22 22">
+            <circle cx="11" cy="11" r="10" fill={isDarkBg ? "#ffe4e6" : "#fff1f2"} stroke={isDarkBg ? "#f43f5e" : "#fecdd3"} strokeWidth="1" />
+            <text x="11" y="14.5" textAnchor="middle" fill={isDarkBg ? "#9f1239" : "#e11d48"} fontSize="10.5" fontWeight="700" fontFamily="Pretendard, sans-serif">비</text>
+          </svg>
+        );
+      }
+      return (
+        <svg width="22" height="22" viewBox="0 0 22 22">
+          <circle cx="11" cy="11" r="10" fill="#f1f5f9" />
+          <text x="11" y="14.5" textAnchor="middle" fill="#334155" fontSize="10.5" fontWeight="700" fontFamily="Pretendard, sans-serif">{shift.substring(0, 1)}</text>
+        </svg>
       );
     }
 
