@@ -37,50 +37,37 @@
       border-radius: 3px;
     }
 
-    /* --- ✨ 빙고 달성 시 샤랄라 반짝임 & 오로라 무지개 애니메이션 --- */
-    @keyframes rainbow-sweep {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-    @keyframes bingo-pulse-glow {
-      0%, 100% {
-        box-shadow: 0 0 12px rgba(245, 158, 11, 0.45), inset 0 0 8px rgba(251, 191, 36, 0.25);
-        border-color: #f59e0b;
+    /* --- ✨ 3연속 당비비 순차 황금빛 물결 애니메이션 --- */
+    @keyframes golden-wave-cascade {
+      0% {
+        transform: scale(1);
+        box-shadow: none;
       }
-      50% {
-        box-shadow: 0 0 22px rgba(236, 72, 153, 0.6), inset 0 0 14px rgba(168, 85, 247, 0.35);
-        border-color: #ec4899;
+      15% {
+        background-color: #f59e0b !important;
+        border-color: #d97706 !important;
+        box-shadow: 0 0 25px rgba(245, 158, 11, 0.95), inset 0 0 15px rgba(254, 243, 199, 0.85) !important;
+        transform: scale(1.04) !important;
+        z-index: 35 !important;
+      }
+      80% {
+        background-color: #f59e0b !important;
+        border-color: #d97706 !important;
+        box-shadow: 0 0 25px rgba(245, 158, 11, 0.95), inset 0 0 15px rgba(254, 243, 199, 0.85) !important;
+        transform: scale(1.04) !important;
+        z-index: 35 !important;
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: none;
+        z-index: 1;
       }
     }
-    @keyframes sparkle-twinkle {
-      0%, 100% { transform: scale(0.85) rotate(0deg); opacity: 0.7; }
-      50% { transform: scale(1.3) rotate(180deg); opacity: 1; }
-    }
 
-    /* 일반 빙고 칸: 화사하고 영롱한 파스텔 오로라 그라데이션 */
-    .bingo-shimmer-cell {
+    .golden-sweep-cell {
       position: relative !important;
-      background: linear-gradient(135deg, #fffbeb, #fef3c7, #fce7f3, #ede9fe, #e0e7ff, #fffbeb) !important;
-      background-size: 300% 300% !important;
-      animation: rainbow-sweep 4s ease infinite, bingo-pulse-glow 2.5s ease-in-out infinite !important;
-      border-width: 2px !important;
-      z-index: 5 !important;
-    }
-
-    /* 운동 완료 + 빙고 칸: 짙은 네이비에 화려한 블루/바이올렛 오로라 광채 */
-    .bingo-shimmer-workout {
-      position: relative !important;
-      background: linear-gradient(135deg, #1e3a8a, #2563eb, #7c3aed, #4338ca, #1e3a8a) !important;
-      background-size: 300% 300% !important;
-      animation: rainbow-sweep 4s ease infinite, bingo-pulse-glow 2.5s ease-in-out infinite !important;
-      border-width: 2px !important;
-      z-index: 5 !important;
-    }
-
-    .twinkle-star {
-      display: inline-block;
-      animation: sparkle-twinkle 2s ease-in-out infinite;
+      animation: golden-wave-cascade 1.7s cubic-bezier(0.2, 0.9, 0.3, 1) forwards !important;
+      z-index: 25 !important;
     }
   </style>
 </head>
@@ -183,6 +170,10 @@
       const [previewDayInfo, setPreviewDayInfo] = useState(null);
       const longPressTimerRef = useRef(null);
       const isLongPressedRef = useRef(false);
+
+      // 황금빛 물결 애니메이션 상태 ({ id, dateMap: { [dateStr]: index } })
+      const [animatingWave, setAnimatingWave] = useState(null);
+      const prevStreakKeysRef = useRef(new Set());
 
       const [settings, setSettings] = useState(() => {
         const saved = localStorage.getItem('shift_app_settings');
@@ -454,12 +445,12 @@
 
       const currMonthlyDays = useMemo(() => getMonthlyDays(currDate), [currDate, settings, overrides, events, workouts]);
 
-      // --- ✨ 이스터에그 감지: 3연속 '당직 - 비번 - 비번' (9일 빙고 라인 계산) ---
-      const bingoData = useMemo(() => {
+      // --- ✨ 3연속 '당직 - 비번 - 비번' (9일 스트릭) 순차 감지 로직 ---
+      useEffect(() => {
         const y = currDate.getFullYear();
         const m = currDate.getMonth();
         
-        // 주변 80일 탐색 범위
+        // 탐색 범위: 현재 월 기준 앞뒤 20일
         const scanStart = new Date(y, m, -15);
         const scanEnd = new Date(y, m + 1, 20);
         
@@ -479,10 +470,9 @@
           temp.setDate(temp.getDate() + 1);
         }
 
-        const bingoDateSet = new Set();
-        const streakRanges = [];
+        const currentStreakKeys = new Set();
+        let newlyFoundStreak = null;
 
-        // 9일 연속 패턴: [당, 비, 비, 당, 비, 비, 당, 비, 비]
         for (let i = 0; i <= scanList.length - 9; i++) {
           const w = scanList.slice(i, i + 9);
           if (
@@ -490,19 +480,34 @@
             w[3].isDuty && w[4].isOff && w[5].isOff &&
             w[6].isDuty && w[7].isOff && w[8].isOff
           ) {
-            w.forEach(item => bingoDateSet.add(item.dateStr));
-            streakRanges.push({
-              start: w[0].dateStr,
-              end: w[8].dateStr
-            });
+            const streakKey = `${w[0].dateStr}_${w[8].dateStr}`;
+            currentStreakKeys.add(streakKey);
+
+            if (!prevStreakKeysRef.current.has(streakKey)) {
+              newlyFoundStreak = w.map(item => item.dateStr);
+            }
           }
         }
 
-        return {
-          bingoDateSet,
-          hasBingo: streakRanges.length > 0,
-          streakRanges
-        };
+        // 새로 3연속 당비비가 완성되었을 때: 1회성 순차 황금빛 물결 애니메이션 실행
+        if (newlyFoundStreak) {
+          const dateMap = {};
+          newlyFoundStreak.forEach((dStr, idx) => {
+            dateMap[dStr] = idx; // 0부터 8까지 순서
+          });
+
+          setAnimatingWave({
+            id: Date.now(),
+            dateMap
+          });
+
+          // 9개 칸 순차 점등 (8 * 120ms = ~1.0s) + 1.7s 애니메이션 = 총 2.7s 후 완전 종료 및 일반 화면 복귀
+          setTimeout(() => {
+            setAnimatingWave(null);
+          }, 2800);
+        }
+
+        prevStreakKeysRef.current = currentStreakKeys;
       }, [currDate, settings, overrides]);
 
       const monthSummary = useMemo(() => {
@@ -554,11 +559,16 @@
                   const isSunday = day.dayOfWeek === 0;
                   const isSaturday = day.dayOfWeek === 6;
                   const isHoliday = !!day.holidayName;
-                  const isBingo = bingoData.bingoDateSet.has(day.dateStr) && day.isCurrentMonth;
+
+                  // 현재 이 칸이 순차 황금빛 물결 진행 중인지 확인
+                  const waveIndex = animatingWave?.dateMap?.[day.dateStr];
+                  const isWaveActive = waveIndex !== undefined;
 
                   let dateNumColor = "text-slate-800";
                   if (!day.isCurrentMonth) {
                     dateNumColor = "text-slate-300";
+                  } else if (isWaveActive) {
+                    dateNumColor = "text-amber-950 font-black";
                   } else if (day.isWorkout) {
                     if (isSunday || isHoliday) {
                       dateNumColor = "text-rose-200 font-black";
@@ -567,29 +577,15 @@
                     } else {
                       dateNumColor = "text-white font-black";
                     }
-                  } else if (isBingo) {
-                    // 빙고 칸의 날짜 색상
-                    if (isSunday || isHoliday) {
-                      dateNumColor = "text-red-600 font-black";
-                    } else if (isSaturday) {
-                      dateNumColor = "text-blue-600 font-black";
-                    } else {
-                      dateNumColor = "text-amber-950 font-black";
-                    }
                   } else if (isSunday || isHoliday) {
                     dateNumColor = "text-red-500";
                   } else if (isSaturday) {
                     dateNumColor = "text-blue-500";
                   }
 
-                  // 칸 스타일: 빙고 달성 시 샤랄라 오로라 반짝임 효과 적용!
                   let cellBgStyle = "bg-white";
                   if (!day.isCurrentMonth) {
                     cellBgStyle = "bg-slate-50/40";
-                  } else if (isBingo && day.isWorkout) {
-                    cellBgStyle = "bingo-shimmer-workout";
-                  } else if (isBingo) {
-                    cellBgStyle = "bingo-shimmer-cell";
                   } else if (day.isWorkout) {
                     cellBgStyle = "bg-[#1e3a8a] border-[#254ea3] shadow-xs";
                   }
@@ -602,20 +598,16 @@
                       onMouseDown={() => handleCellTouchStart(day)}
                       onMouseUp={handleCellTouchEnd}
                       onClick={() => handleCellClick(day)}
+                      style={isWaveActive ? { animationDelay: `${waveIndex * 120}ms` } : {}}
                       className={`min-h-[150px] p-2 transition cursor-pointer flex flex-col justify-between group hover:brightness-95 active:scale-[0.99] ${cellBgStyle} ${
-                        day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""
-                      }`}
+                        isWaveActive ? "golden-sweep-cell" : ""
+                      } ${day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""}`}
                     >
                       <div>
                         <div className="flex items-start justify-between">
-                          <span className={`text-sm ${dateNumColor} flex items-center space-x-1`}>
-                            <span>{day.dayNum}</span>
-                            {/* 빙고 달성 칸에 샤랄라 반짝이 아이콘 */}
-                            {isBingo && (
-                              <span className="twinkle-star text-xs">✨</span>
-                            )}
+                          <span className={`text-sm ${dateNumColor}`}>
+                            {day.dayNum}
                           </span>
-
                           {/* 운동 배지 */}
                           {day.workoutInfo && day.isCurrentMonth && (
                             <span 
@@ -629,7 +621,7 @@
 
                         {day.holidayName && day.isCurrentMonth && (
                           <div className={`text-[10px] font-semibold truncate leading-tight mt-0.5 ${
-                            day.isWorkout ? 'text-rose-200 font-bold' : isBingo ? 'text-red-600 font-bold' : 'text-red-500'
+                            day.isWorkout ? 'text-rose-200 font-bold' : 'text-red-500'
                           }`}>
                             {day.holidayName}
                           </div>
@@ -639,8 +631,7 @@
                       <div className="my-2 flex flex-col items-center justify-center">
                         <ShiftBadge 
                           info={day.shiftInfo} 
-                          isDarkBg={day.isWorkout && day.isCurrentMonth} 
-                          isBingo={isBingo}
+                          isDarkBg={day.isWorkout && day.isCurrentMonth && !isWaveActive} 
                         />
                       </div>
 
@@ -652,14 +643,12 @@
                             className={`text-[10px] px-1.5 py-1 rounded-md truncate font-semibold flex items-center justify-between shadow-2xs border ${
                               day.isWorkout 
                                 ? "bg-white/95 text-slate-900 border-blue-200" 
-                                : isBingo
-                                ? "bg-white/90 text-amber-950 border-amber-300 font-bold"
                                 : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200/80"
                             }`}
                           >
                             <span className="truncate">{evt.title}</span>
                             {evt.time && <span className={`text-[9px] pl-1 shrink-0 font-bold ${
-                              day.isWorkout ? 'text-blue-800' : isBingo ? 'text-amber-700' : 'text-emerald-700'
+                              day.isWorkout ? 'text-blue-800' : 'text-emerald-700'
                             }`}>{evt.time}</span>}
                           </div>
                         ))}
@@ -681,7 +670,6 @@
                   const isSunday = day.dayOfWeek === 0;
                   const isSaturday = day.dayOfWeek === 6;
                   const isHoliday = !!day.holidayName;
-                  const isBingo = bingoData.bingoDateSet.has(day.dateStr);
                   const dayNames = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
 
                   let headerBg = "bg-slate-50 text-slate-700";
@@ -718,27 +706,17 @@
                     <div
                       key={idx}
                       className={`bg-white rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden ${
-                        isBingo ? "ring-2 ring-amber-400 border-amber-400 shadow-md" : ""
-                      } ${day.isWorkout ? "ring-2 ring-[#1e3a8a] border-[#1e3a8a]" : ""} ${
-                        day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"
-                      }`}
+                        day.isWorkout ? "ring-2 ring-[#1e3a8a] border-[#1e3a8a] bg-blue-50/40" : ""
+                      } ${day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"}`}
                     >
                       <div className={`p-3 border-b flex items-center justify-between ${headerBg}`}>
                         <div>
-                          <div className="text-xs font-semibold opacity-90 flex items-center space-x-1">
-                            <span>{dayNames[day.dayOfWeek]}</span>
-                            {isBingo && <span className="twinkle-star text-[11px]">✨</span>}
-                          </div>
+                          <div className="text-xs font-semibold opacity-90">{dayNames[day.dayOfWeek]}</div>
                           <div className={`text-lg font-bold leading-none ${dateNumColor}`}>
                             {day.dateStr.substring(5).replace('-', '.')}
                           </div>
                         </div>
                         <div className="flex items-center space-x-1.5">
-                          {isBingo && (
-                            <span className="text-[10px] font-black bg-gradient-to-r from-amber-400 via-pink-500 to-purple-500 text-white px-2 py-0.5 rounded-full shadow-xs animate-pulse">
-                              ✨ BINGO
-                            </span>
-                          )}
                           {day.workoutInfo && (
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#1e3a8a] text-white flex items-center space-x-1 shadow-xs">
                               <span>{day.workoutInfo.icon}</span>
@@ -756,7 +734,7 @@
                       <div className="p-3 flex-1 flex flex-col justify-between space-y-3">
                         <div className={`flex items-center justify-between p-2.5 rounded-xl border transition ${shiftBoxStyle}`}>
                           <span className={`text-xs ${shiftLabelStyle}`}>오늘의 근무</span>
-                          <ShiftBadge info={day.shiftInfo} isBingo={isBingo} />
+                          <ShiftBadge info={day.shiftInfo} />
                         </div>
 
                         {/* 위클리 일정 목록 */}
@@ -989,15 +967,6 @@
                   )}
                 </div>
 
-                {/* 3연속 당비비 빙고 달성 시 화려한 샤랄라 배지 */}
-                {bingoData.hasBingo && (
-                  <div className="flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 text-white px-3 py-0.5 rounded-full shadow-md animate-pulse shrink-0">
-                    <span className="twinkle-star">✨</span>
-                    <span className="font-black tracking-wide">3연속 당비비 BINGO!</span>
-                    <span className="twinkle-star">✨</span>
-                  </div>
-                )}
-
                 {monthSummary.연차 > 0 && (
                   <div className="flex items-center space-x-1 bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full border border-slate-200">
                     <span className="w-2 h-2 rounded-full bg-slate-500"></span>
@@ -1068,11 +1037,11 @@
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-blue-600 rounded-full inline-block"></span><span>당직</span></span>
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-amber-400 rounded-full inline-block"></span><span>주간</span></span>
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-rose-50 border border-rose-200 text-rose-600 font-bold text-[9px] rounded-full flex items-center justify-center inline-block">비</span><span>비번</span></span>
-              <span className="flex items-center space-x-1"><span className="w-4 h-4 bg-[#1e3a8a] text-white rounded-md inline-flex items-center justify-center text-[10px]">🏃</span><span>운동 완료</span></span>
-              <span className="flex items-center space-x-1"><span className="w-4 h-4 bg-gradient-to-r from-amber-300 via-pink-300 to-purple-300 border border-amber-400 rounded-md inline-flex items-center justify-center text-[10px]">✨</span><span>3연속 당비비 빙고</span></span>
+              <span className="flex items-center space-x-1"><span className="w-4 h-4 bg-[#1e3a8a] text-white rounded-md inline-flex items-center justify-center text-[10px]">🏃</span><span>달리기 완료</span></span>
+              <span className="flex items-center space-x-1"><span className="w-4 h-4 bg-[#1e3a8a] text-white rounded-md inline-flex items-center justify-center text-[10px]">🏋️</span><span>크로스핏 완료</span></span>
             </div>
             <div className="text-slate-400 text-[11px]">
-              * 당비비 3연속(9일) 달성 시 달력 칸 전체가 샤랄라한 오로라 반짝임으로 빛납니다.
+              * 날짜를 터치하여 운동 및 일정을 관리할 수 있습니다.
             </div>
           </div>
 
@@ -1137,7 +1106,7 @@
       );
     }
 
-    function ShiftBadge({ info, isDarkBg, isBingo }) {
+    function ShiftBadge({ info, isDarkBg }) {
       const { shift, isOverride } = info;
 
       if (shift === '당직') {
@@ -1174,8 +1143,6 @@
             <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-xs border ${
               isDarkBg 
                 ? 'bg-rose-100 text-rose-800 border-rose-200' 
-                : isBingo
-                ? 'bg-rose-100/90 text-rose-700 border-rose-300 font-black'
                 : 'bg-rose-50 text-rose-600 border-rose-200'
             }`}>
               비
