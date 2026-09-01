@@ -6,6 +6,7 @@
   <title>스케줄 근무 및 일정 관리</title>
 
   <!-- 앱 아이콘 및 파비콘 설정 -->
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="shortcut icon" href="icon.png">
@@ -446,6 +447,25 @@
                     dateNumColor = "text-blue-500";
                   }
 
+                  // 오늘의 근무 칸 배경색 및 테두리/글자색 지정
+                  const shift = day.shiftInfo.shift;
+                  let shiftBoxStyle = "bg-white border-slate-200";
+                  let shiftLabelStyle = "text-slate-600";
+
+                  if (shift === '주간') {
+                    shiftBoxStyle = "bg-amber-100/90 border-amber-300";
+                    shiftLabelStyle = "text-amber-950 font-bold";
+                  } else if (shift === '당직') {
+                    shiftBoxStyle = "bg-blue-100/90 border-blue-300";
+                    shiftLabelStyle = "text-blue-950 font-bold";
+                  } else if (shift === '비번') {
+                    shiftBoxStyle = "bg-white border-slate-200 shadow-xs";
+                    shiftLabelStyle = "text-slate-700 font-bold";
+                  } else {
+                    shiftBoxStyle = "bg-emerald-100/90 border-emerald-300";
+                    shiftLabelStyle = "text-emerald-950 font-bold";
+                  }
+
                   return (
                     <div
                       key={idx}
@@ -468,8 +488,9 @@
                       </div>
 
                       <div className="p-3 flex-1 flex flex-col justify-between space-y-3">
-                        <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-100">
-                          <span className="text-xs font-semibold text-slate-500">오늘의 근무</span>
+                        {/* 오늘의 근무 칸 (주간: 노랑 / 당직: 파랑 / 비번: 화이트) */}
+                        <div className={`flex items-center justify-between p-2.5 rounded-xl border transition ${shiftBoxStyle}`}>
+                          <span className={`text-xs ${shiftLabelStyle}`}>오늘의 근무</span>
                           <ShiftBadge info={day.shiftInfo} />
                         </div>
 
