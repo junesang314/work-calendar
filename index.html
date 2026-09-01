@@ -36,6 +36,20 @@
       background: #cbd5e1;
       border-radius: 3px;
     }
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin-slow {
+      animation: spin-slow 14s linear infinite;
+    }
+    @keyframes float-slow {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-8px) rotate(3deg); }
+    }
+    .animate-float {
+      animation: float-slow 4s ease-in-out infinite;
+    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen pb-20 sm:pb-6 select-none overflow-x-hidden">
@@ -110,7 +124,6 @@
       };
     }
 
-    // 운동 정보 판별 함수
     function getWorkoutInfo(val) {
       if (!val) return null;
       if (val === 'crossfit' || val === '크로스핏') {
@@ -129,7 +142,7 @@
       const [dragX, setDragX] = useState(0);
       const [isDragging, setIsDragging] = useState(false);
       const [isAnimating, setIsAnimating] = useState(false);
-      const pendingDirectionRef = useRef(0); // -1: 다음, 1: 이전
+      const pendingDirectionRef = useRef(0);
 
       const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
       const containerRef = useRef(null);
@@ -138,6 +151,10 @@
       const [previewDayInfo, setPreviewDayInfo] = useState(null);
       const longPressTimerRef = useRef(null);
       const isLongPressedRef = useRef(false);
+
+      // 이스터에그: 로파이 무드 모달 상태
+      const [isLofiOpen, setIsLofiOpen] = useState(false);
+      const prevStreakCountRef = useRef(0);
 
       const [settings, setSettings] = useState(() => {
         const saved = localStorage.getItem('shift_app_settings');
@@ -179,7 +196,7 @@
         localStorage.setItem('shift_app_workouts', JSON.stringify(workouts));
       }, [workouts]);
 
-      // 운동 종류 설정 함수 ('running' | 'crossfit' | null)
+      // 운동 종류 설정
       const setWorkoutType = (dateStr, type) => {
         setWorkouts(prev => {
           const next = { ...prev };
@@ -321,6 +338,11 @@
         setSelectedDateStr(day.dateStr);
       };
 
+      const getEffectiveShift = (dateStr) => {
+        if (overrides[dateStr]) return overrides[dateStr];
+        return calculateAutoShift(dateStr, settings).shift;
+      };
+
       const getDayInfo = (d) => {
         const yearStr = d.getFullYear();
         const monthStr = String(d.getMonth() + 1).padStart(2, '0');
@@ -404,6 +426,63 @@
 
       const currMonthlyDays = useMemo(() => getMonthlyDays(currDate), [currDate, settings, overrides, events, workouts]);
 
+      // --- 이스터에그 감지 로직: 3연속 '당직 - 비번 - 비번' (총 9일) ---
+      const dangBiBiStreakInfo = useMemo(() => {
+        const y = currDate.getFullYear();
+        const m = currDate.getMonth();
+        
+        // 현재 월을 포함하여 앞뒤 10일씩 확장된 연속 날짜 배열 생성
+        const scanStart = new Date(y, m, -5);
+        const scanEnd = new Date(y, m + 1, 10);
+        
+        const scanList = [];
+        let temp = new Date(scanStart);
+        while (temp <= scanEnd) {
+          const yearStr = temp.getFullYear();
+          const monthStr = String(temp.getMonth() + 1).padStart(2, '0');
+          const dayStr = String(temp.getDate()).padStart(2, '0');
+          const dStr = `${yearStr}-${monthStr}-${dayStr}`;
+          
+          const rawShift = getEffectiveShift(dStr);
+          // '비번' 또는 '연차'는 비번(휴무) 계열로 인정
+          const isOff = rawShift === '비번' || rawShift === '연차';
+          const isDuty = rawShift === '당직';
+
+          scanList.push({ dateStr: dStr, isDuty, isOff, shift: rawShift });
+          temp.setDate(temp.getDate() + 1);
+        }
+
+        // 9일 연속 패턴 검사: [당, 비, 비, 당, 비, 비, 당, 비, 비]
+        for (let i = 0; i <= scanList.length - 9; i++) {
+          const w = scanList.slice(i, i + 9);
+          if (
+            w[0].isDuty && w[1].isOff && w[2].isOff &&
+            w[3].isDuty && w[4].isOff && w[5].isOff &&
+            w[6].isDuty && w[7].isOff && w[8].isOff
+          ) {
+            return {
+              hasStreak: true,
+              startDate: w[0].dateStr,
+              endDate: w[8].dateStr
+            };
+          }
+        }
+
+        return { hasStreak: false };
+      }, [currDate, settings, overrides]);
+
+      // 3연속 당비비가 새로 달성되면 자동으로 로파이 무드 발동!
+      useEffect(() => {
+        if (dangBiBiStreakInfo.hasStreak) {
+          if (prevStreakCountRef.current === 0) {
+            setIsLofiOpen(true);
+          }
+          prevStreakCountRef.current = 1;
+        } else {
+          prevStreakCountRef.current = 0;
+        }
+      }, [dangBiBiStreakInfo]);
+
       const monthSummary = useMemo(() => {
         const summary = { 당직: 0, 주간: 0, 비번: 0, 연차: 0, 달리기: 0, 크로스핏: 0, 총운동: 0 };
         currMonthlyDays.forEach(day => {
@@ -458,7 +537,6 @@
                   if (!day.isCurrentMonth) {
                     dateNumColor = "text-slate-300";
                   } else if (day.isWorkout) {
-                    // 클래식 네이비 칸 배경에서의 날짜 숫자 색상
                     if (isSunday || isHoliday) {
                       dateNumColor = "text-rose-200 font-black";
                     } else if (isSaturday) {
@@ -472,7 +550,6 @@
                     dateNumColor = "text-blue-500";
                   }
 
-                  // 칸 배경색: 당직 블루(#2563EB)보다는 짙고, 블랙 느낌이 아닌 세련된 '클래식 네이비(#1e3a8a)'로 설정!
                   let cellBgStyle = !day.isCurrentMonth 
                     ? "bg-slate-50/40" 
                     : day.isWorkout 
@@ -496,7 +573,6 @@
                           <span className={`text-sm ${dateNumColor}`}>
                             {day.dayNum}
                           </span>
-                          {/* 운동 완료 시: 크로스핏(🏋️) 또는 달리기(🏃) 배지 */}
                           {day.workoutInfo && day.isCurrentMonth && (
                             <span 
                               className="text-[12px] bg-[#142862] text-white border border-blue-300/40 rounded-md px-1.5 py-0.5 font-bold shadow-xs flex items-center justify-center"
@@ -836,7 +912,8 @@
                   <span className="w-2 h-2 rounded-full bg-rose-500"></span>
                   <span>비번 {monthSummary.비번}</span>
                 </div>
-                {/* 운동 총계: 달리기 / 크로스핏 상세 표시 */}
+                
+                {/* 운동 총계 */}
                 <div className="flex items-center space-x-1.5 bg-[#1e3a8a] text-white px-3 py-0.5 rounded-full border border-blue-700 shadow-xs">
                   <span className="w-2 h-2 rounded-full bg-blue-300"></span>
                   <span className="font-bold">운동 {monthSummary.총운동}회</span>
@@ -846,6 +923,20 @@
                     </span>
                   )}
                 </div>
+
+                {/* 이스터에그 발동 시 나타나는 황금 당비비 배지 (터치 시 로파이 모달 열림) */}
+                {dangBiBiStreakInfo.hasStreak && (
+                  <button
+                    onClick={() => setIsLofiOpen(true)}
+                    className="flex items-center space-x-1.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 text-white px-3 py-0.5 rounded-full shadow-md animate-pulse hover:opacity-90 transition active:scale-95 shrink-0"
+                    title="3연속 당비비 Lofi 무드 열기"
+                  >
+                    <span>☕</span>
+                    <span className="font-bold">3연속 당비비 Lofi</span>
+                    <span>✨</span>
+                  </button>
+                )}
+
                 {monthSummary.연차 > 0 && (
                   <div className="flex items-center space-x-1 bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full border border-slate-200">
                     <span className="w-2 h-2 rounded-full bg-slate-500"></span>
@@ -920,7 +1011,7 @@
               <span className="flex items-center space-x-1"><span className="w-4 h-4 bg-[#1e3a8a] text-white rounded-md inline-flex items-center justify-center text-[10px]">🏋️</span><span>크로스핏 완료</span></span>
             </div>
             <div className="text-slate-400 text-[11px]">
-              * 운동한 날은 칸 전체가 클래식 네이비(Classic Navy) 색으로 표시됩니다.
+              * 당비비 3연속 완성 시 시크릿 로파이(Lofi) 무드가 열립니다.
             </div>
           </div>
 
@@ -968,6 +1059,14 @@
                   [selectedDateStr]: list.filter((e) => e.id !== eventId)
                 });
               }}
+            />
+          )}
+
+          {/* 이스터에그 로파이 무드 모달 */}
+          {isLofiOpen && (
+            <LofiMoodModal
+              streakInfo={dangBiBiStreakInfo}
+              onClose={() => setIsLofiOpen(false)}
             />
           )}
 
@@ -1040,7 +1139,151 @@
       );
     }
 
-    // --- 롱프레스 간략 팝업 컴포넌트 ---
+    // --- 이스터에그: Lofi Mood Modal 컴포넌트 ---
+    function LofiMoodModal({ streakInfo, onClose }) {
+      const [isPlayingRain, setIsPlayingRain] = useState(false);
+      const audioCtxRef = useRef(null);
+      const rainNodeRef = useRef(null);
+
+      // Web Audio API로 잔잔한 로파이 빗소리 생성
+      const toggleRainSound = () => {
+        if (!isPlayingRain) {
+          try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const ctx = new AudioContext();
+            audioCtxRef.current = ctx;
+
+            const bufferSize = ctx.sampleRate * 2;
+            const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            let lastOut = 0.0;
+            for (let i = 0; i < bufferSize; i++) {
+              const white = Math.random() * 2 - 1;
+              output[i] = (lastOut + 0.02 * white) / 1.02;
+              lastOut = output[i];
+              output[i] *= 3.5;
+            }
+
+            const whiteNoise = ctx.createBufferSource();
+            whiteNoise.buffer = noiseBuffer;
+            whiteNoise.loop = true;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(800, ctx.currentTime);
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+
+            whiteNoise.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+
+            whiteNoise.start(0);
+            rainNodeRef.current = { whiteNoise, ctx };
+            setIsPlayingRain(true);
+          } catch (e) {
+            console.error(e);
+          }
+        } else {
+          if (rainNodeRef.current) {
+            rainNodeRef.current.whiteNoise.stop();
+            rainNodeRef.current.ctx.close();
+            rainNodeRef.current = null;
+          }
+          setIsPlayingRain(false);
+        }
+      };
+
+      useEffect(() => {
+        return () => {
+          if (rainNodeRef.current) {
+            rainNodeRef.current.whiteNoise.stop();
+            rainNodeRef.current.ctx.close();
+          }
+        };
+      }, []);
+
+      return (
+        <div 
+          onClick={onClose}
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative bg-gradient-to-b from-[#111827] via-[#1e1b4b] to-[#0f172a] rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-purple-500/30 p-6 text-center text-slate-100 space-y-5 animate-in zoom-in-95 duration-200"
+          >
+            {/* 상단 닫기 */}
+            <button 
+              onClick={onClose}
+              className="absolute top-4 right-4 text-purple-300 hover:text-white p-1 rounded-full bg-white/10 transition"
+            >
+              <i className="fa-solid fa-xmark text-sm w-6 h-6 flex items-center justify-center"></i>
+            </button>
+
+            {/* 감성 Lofi 일러스트 & 바이닐 LP 애니메이션 */}
+            <div className="relative flex items-center justify-center pt-2">
+              {/* 회전하는 LP판 */}
+              <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-slate-900 via-zinc-800 to-black p-1 shadow-2xl border-2 border-purple-500/40 animate-spin-slow flex items-center justify-center relative">
+                <div className="w-24 h-24 rounded-full border border-zinc-700/50 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full border border-zinc-700/50 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-inner">
+                      ☕
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 톤암 & 감성 음표 */}
+              <div className="absolute -top-1 right-12 text-lg animate-float">
+                🎶
+              </div>
+              <div className="absolute bottom-2 left-10 text-sm animate-float" style={{ animationDelay: '1.5s' }}>
+                🌧️
+              </div>
+              <div className="absolute top-8 left-12 text-sm animate-float" style={{ animationDelay: '2.5s' }}>
+                ✨
+              </div>
+            </div>
+
+            {/* 타이틀 및 텍스트 */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-purple-400 bg-purple-950/60 border border-purple-500/30 px-2.5 py-0.5 rounded-full">
+                Secret Easter Egg
+              </span>
+              <h3 className="text-xl font-black bg-gradient-to-r from-purple-200 via-pink-200 to-indigo-200 bg-clip-text text-transparent">
+                3연속 당비비의 기적 ☕
+              </h3>
+              <p className="text-xs text-purple-200/80 leading-relaxed px-2">
+                꿈의 <strong className="text-purple-300 font-semibold">[당-비-비 x 3연속]</strong> 황금 루틴이 완성되었습니다!
+                <br />
+                창밖의 빗소리와 함께 온전한 여유를 즐겨보세요.
+              </p>
+            </div>
+
+            {/* 빗소리 ASMR 재생 버튼 */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={toggleRainSound}
+                className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 border shadow-lg active:scale-95 ${
+                  isPlayingRain 
+                    ? 'bg-purple-600 text-white border-purple-400 shadow-purple-900/50' 
+                    : 'bg-white/10 hover:bg-white/15 text-purple-200 border-white/10'
+                }`}
+              >
+                <span>{isPlayingRain ? '🌧️ 빗소리 끄기' : '🌧️ 감성 빗소리 ASMR 켜기'}</span>
+              </button>
+            </div>
+
+            <div className="text-[10px] text-purple-300/60">
+              * 상단의 '3연속 당비비 Lofi' 배지를 눌러 언제든 다시 열 수 있습니다.
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     function QuickPreviewPopup({ dayInfo, workoutInfo, onSelectWorkout, onClose, onOpenDetail }) {
       const { dateStr, holidayName, shiftInfo, dayEvents, dayOfWeek } = dayInfo;
       const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dayOfWeek];
@@ -1216,7 +1459,7 @@
             </div>
 
             <div className="p-5 space-y-5 max-h-[80vh] overflow-y-auto">
-              {/* 1. 운동 종류 선택 영역 (달리기 🏃 / 크로스핏 🏋️ / 취소) */}
+              {/* 1. 운동 종류 선택 영역 */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
