@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -126,7 +125,7 @@
       const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
       const containerRef = useRef(null);
 
-      // 꾹 누르기(롱프레스) 간략 팝업 상태
+      // 롱프레스 간략 팝업 상태
       const [previewDayInfo, setPreviewDayInfo] = useState(null);
       const longPressTimerRef = useRef(null);
       const isLongPressedRef = useRef(false);
@@ -146,6 +145,12 @@
         return saved ? JSON.parse(saved) : {};
       });
 
+      // 운동 기록 상태 ({ "YYYY-MM-DD": true })
+      const [workouts, setWorkouts] = useState(() => {
+        const saved = localStorage.getItem('shift_app_workouts');
+        return saved ? JSON.parse(saved) : {};
+      });
+
       const [selectedDateStr, setSelectedDateStr] = useState(null);
       const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -160,6 +165,23 @@
       useEffect(() => {
         localStorage.setItem('shift_app_events', JSON.stringify(events));
       }, [events]);
+
+      useEffect(() => {
+        localStorage.setItem('shift_app_workouts', JSON.stringify(workouts));
+      }, [workouts]);
+
+      // 운동 토글 함수
+      const toggleWorkout = (dateStr) => {
+        setWorkouts(prev => {
+          const next = { ...prev };
+          if (next[dateStr]) {
+            delete next[dateStr];
+          } else {
+            next[dateStr] = true;
+          }
+          return next;
+        });
+      };
 
       const getRelativeDate = (baseDate, offset) => {
         const d = new Date(baseDate);
@@ -213,7 +235,6 @@
         const deltaX = currentX - touchStartRef.current.x;
         const deltaY = currentY - touchStartRef.current.y;
 
-        // 드래그 움직임이 감지되면 롱프레스 취소
         if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) {
           if (longPressTimerRef.current) {
             clearTimeout(longPressTimerRef.current);
@@ -267,14 +288,13 @@
         pendingDirectionRef.current = 0;
       };
 
-      // --- 롱프레스 핸들러 (먼슬리 날짜 꾹 누를 때) ---
       const handleCellTouchStart = (day) => {
         isLongPressedRef.current = false;
         longPressTimerRef.current = setTimeout(() => {
           isLongPressedRef.current = true;
           setPreviewDayInfo(day);
           if (navigator.vibrate) navigator.vibrate(40);
-        }, 450); // 0.45초 꾹 누르면 팝업 발동
+        }, 450);
       };
 
       const handleCellTouchEnd = () => {
@@ -285,7 +305,6 @@
       };
 
       const handleCellClick = (day) => {
-        // 방금 롱프레스가 발동되었으면 일반 클릭(전체 모달 열기)은 건너뜀
         if (isLongPressedRef.current) {
           isLongPressedRef.current = false;
           return;
@@ -303,6 +322,7 @@
         const isToday = dateStr === todayStr;
         const dayOfWeek = d.getDay();
         const holidayName = getHolidayName(dateStr);
+        const isWorkout = !!workouts[dateStr];
 
         let shiftInfo;
         if (overrides[dateStr]) {
@@ -320,6 +340,7 @@
           isToday,
           holidayName,
           shiftInfo,
+          isWorkout,
           dayEvents: events[dateStr] || []
         };
       };
@@ -368,14 +389,15 @@
         return days;
       };
 
-      const currMonthlyDays = useMemo(() => getMonthlyDays(currDate), [currDate, settings, overrides, events]);
+      const currMonthlyDays = useMemo(() => getMonthlyDays(currDate), [currDate, settings, overrides, events, workouts]);
 
       const monthSummary = useMemo(() => {
-        const summary = { 당직: 0, 주간: 0, 비번: 0, 연차: 0 };
+        const summary = { 당직: 0, 주간: 0, 비번: 0, 연차: 0, 운동: 0 };
         currMonthlyDays.forEach(day => {
           if (day.isCurrentMonth) {
             const s = day.shiftInfo.shift;
             if (summary[s] !== undefined) summary[s]++;
+            if (day.isWorkout) summary.운동++;
           }
         });
         return summary;
@@ -387,7 +409,7 @@
         const start = days[0].dateStr;
         const end = days[6].dateStr;
         return `${start.replace(/-/g, '.')} ~ ${end.substring(5).replace(/-/g, '.')}`;
-      }, [currDate, settings, overrides, events]);
+      }, [currDate, settings, overrides, events, workouts]);
 
       const toggleYearlyView = () => {
         setViewMode(prev => (prev === 'yearly' ? 'monthly' : 'yearly'));
@@ -424,6 +446,13 @@
                     dateNumColor = "text-blue-500";
                   }
 
+                  // 칸 배경색: 운동 완료 시 산뜻한 초록색 칸으로 확 변경!
+                  let cellBgStyle = !day.isCurrentMonth 
+                    ? "bg-slate-50/40" 
+                    : day.isWorkout 
+                    ? "bg-emerald-100/75 border-emerald-300/80" 
+                    : "bg-white";
+
                   return (
                     <div
                       key={idx}
@@ -432,15 +461,21 @@
                       onMouseDown={() => handleCellTouchStart(day)}
                       onMouseUp={handleCellTouchEnd}
                       onClick={() => handleCellClick(day)}
-                      className={`min-h-[150px] p-2 transition cursor-pointer flex flex-col justify-between group hover:bg-slate-50/80 active:bg-slate-100/70 ${
-                        !day.isCurrentMonth ? "bg-slate-50/40" : "bg-white"
-                      } ${day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""}`}
+                      className={`min-h-[150px] p-2 transition cursor-pointer flex flex-col justify-between group hover:brightness-95 active:scale-[0.99] ${cellBgStyle} ${
+                        day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""
+                      }`}
                     >
                       <div>
                         <div className="flex items-start justify-between">
                           <span className={`text-sm font-bold ${dateNumColor}`}>
                             {day.dayNum}
                           </span>
+                          {/* 운동 완료 시 날짜 옆 미니 덤벨/러닝 배지 */}
+                          {day.isWorkout && day.isCurrentMonth && (
+                            <span className="text-[11px] bg-emerald-600 text-white rounded-md px-1 py-0.2 font-bold shadow-xs">
+                              🏃
+                            </span>
+                          )}
                         </div>
 
                         {day.holidayName && day.isCurrentMonth && (
@@ -454,12 +489,16 @@
                         <ShiftBadge info={day.shiftInfo} />
                       </div>
 
-                      {/* 등록된 일정: 초록색(Emerald) 배지로 산뜻하게 표시 */}
+                      {/* 등록된 일정 목록 */}
                       <div className="space-y-1 mt-auto max-h-[65px] overflow-y-auto custom-scrollbar pr-0.5">
                         {day.dayEvents.map((evt) => (
                           <div
                             key={evt.id}
-                            className="text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 px-1.5 py-1 rounded-md truncate font-semibold flex items-center justify-between shadow-2xs"
+                            className={`text-[10px] px-1.5 py-1 rounded-md truncate font-semibold flex items-center justify-between shadow-2xs border ${
+                              day.isWorkout 
+                                ? "bg-white/90 text-emerald-900 border-emerald-300" 
+                                : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200/80"
+                            }`}
                           >
                             <span className="truncate">{evt.title}</span>
                             {evt.time && <span className="text-[9px] text-emerald-600 pl-1 shrink-0">{evt.time}</span>}
@@ -519,8 +558,8 @@
                     <div
                       key={idx}
                       className={`bg-white rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden ${
-                        day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"
-                      }`}
+                        day.isWorkout ? "ring-2 ring-emerald-400 border-emerald-400 bg-emerald-50/30" : ""
+                      } ${day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"}`}
                     >
                       <div className={`p-3 border-b flex items-center justify-between ${headerBg}`}>
                         <div>
@@ -529,11 +568,18 @@
                             {day.dateStr.substring(5).replace('-', '.')}
                           </div>
                         </div>
-                        {day.holidayName && (
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${day.isToday ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'}`}>
-                            {day.holidayName}
-                          </span>
-                        )}
+                        <div className="flex items-center space-x-1.5">
+                          {day.isWorkout && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-600 text-white flex items-center space-x-0.5 shadow-xs">
+                              <span>🏃 운동완료</span>
+                            </span>
+                          )}
+                          {day.holidayName && (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${day.isToday ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'}`}>
+                              {day.holidayName}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="p-3 flex-1 flex flex-col justify-between space-y-3">
@@ -542,7 +588,7 @@
                           <ShiftBadge info={day.shiftInfo} />
                         </div>
 
-                        {/* 위클리 일정 목록: 초록색(Emerald) 테마로 적용 */}
+                        {/* 위클리 일정 목록 */}
                         <div className="space-y-1.5 flex-1 min-h-[100px]">
                           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
                             <span>일정 ({day.dayEvents.length})</span>
@@ -568,13 +614,26 @@
                           )}
                         </div>
 
-                        <button
-                          onClick={() => setSelectedDateStr(day.dateStr)}
-                          className="w-full py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition flex items-center justify-center space-x-1 active:scale-95"
-                        >
-                          <i className="fa-solid fa-plus text-[10px]"></i>
-                          <span>일정/근무 수정</span>
-                        </button>
+                        <div className="flex space-x-1.5">
+                          <button
+                            onClick={() => toggleWorkout(day.dateStr)}
+                            className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1 border active:scale-95 ${
+                              day.isWorkout
+                                ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                                : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                            }`}
+                          >
+                            <span>🏃</span>
+                            <span>{day.isWorkout ? "운동 완료됨" : "운동 체크"}</span>
+                          </button>
+                          <button
+                            onClick={() => setSelectedDateStr(day.dateStr)}
+                            className="px-2.5 py-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition active:scale-95"
+                            title="일정/근무 수정"
+                          >
+                            <i className="fa-solid fa-pen text-[10px]"></i>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -665,7 +724,7 @@
                     {viewMode === 'yearly'
                       ? '한 해 12달 전체 선택 (좌우 슬라이드로 연도 이동)'
                       : viewMode === 'monthly'
-                      ? '월간 근무 및 일정 (날짜를 꾹 누르면 간략 팝업)'
+                      ? '월간 근무 및 일정 (날짜 꾹 누르면 퀵 팝업 & 운동 체크)'
                       : '주간 상세 스케줄 (좌우 슬라이드로 주 이동)'}
                   </p>
                 </div>
@@ -732,9 +791,14 @@
                   <span className="w-2 h-2 rounded-full bg-rose-500"></span>
                   <span>비번 {monthSummary.비번}</span>
                 </div>
+                {/* 운동 총 횟수 배지 */}
+                <div className="flex items-center space-x-1 bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span>운동 {monthSummary.운동}회</span>
+                </div>
                 {monthSummary.연차 > 0 && (
-                  <div className="flex items-center space-x-1 bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-100">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <div className="flex items-center space-x-1 bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full border border-slate-200">
+                    <span className="w-2 h-2 rounded-full bg-slate-500"></span>
                     <span>연차 {monthSummary.연차}</span>
                   </div>
                 )}
@@ -802,10 +866,10 @@
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-blue-600 rounded-full inline-block"></span><span>당직</span></span>
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-amber-400 rounded-full inline-block"></span><span>주간</span></span>
               <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-rose-50 border border-rose-200 text-rose-600 font-bold text-[9px] rounded-full flex items-center justify-center inline-block">비</span><span>비번</span></span>
-              <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-emerald-600 rounded-full inline-block"></span><span>연차/기타</span></span>
+              <span className="flex items-center space-x-1"><span className="w-3.5 h-3.5 bg-emerald-100 border border-emerald-400 rounded-md inline-flex items-center justify-center text-[9px]">🏃</span><span>운동 완료 칸</span></span>
             </div>
             <div className="text-slate-400 text-[11px]">
-              * 날짜를 가볍게 터치하면 등록/수정 모달, 길게 누르면 간략 팝업이 나타납니다.
+              * 날짜를 터치하여 운동을 체크하면 먼슬리 칸 색상이 초록색으로 변경됩니다.
             </div>
           </div>
 
@@ -813,6 +877,8 @@
           {previewDayInfo && (
             <QuickPreviewPopup
               dayInfo={previewDayInfo}
+              isWorkout={!!workouts[previewDayInfo.dateStr]}
+              onToggleWorkout={() => toggleWorkout(previewDayInfo.dateStr)}
               onClose={() => setPreviewDayInfo(null)}
               onOpenDetail={() => {
                 setSelectedDateStr(previewDayInfo.dateStr);
@@ -825,6 +891,8 @@
           {selectedDateStr && (
             <DateDetailModal
               dateStr={selectedDateStr}
+              isWorkout={!!workouts[selectedDateStr]}
+              onToggleWorkout={() => toggleWorkout(selectedDateStr)}
               onClose={() => setSelectedDateStr(null)}
               settings={settings}
               overrideShift={overrides[selectedDateStr]}
@@ -916,7 +984,7 @@
     }
 
     // --- 롱프레스 간략 팝업 컴포넌트 ---
-    function QuickPreviewPopup({ dayInfo, onClose, onOpenDetail }) {
+    function QuickPreviewPopup({ dayInfo, isWorkout, onToggleWorkout, onClose, onOpenDetail }) {
       const { dateStr, holidayName, shiftInfo, dayEvents, dayOfWeek } = dayInfo;
       const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dayOfWeek];
 
@@ -953,6 +1021,25 @@
               </button>
             </div>
 
+            {/* 원터치 운동 완료 체크 버튼 */}
+            <button
+              type="button"
+              onClick={onToggleWorkout}
+              className={`w-full py-2 px-3 text-xs font-bold rounded-xl transition flex items-center justify-between border shadow-2xs ${
+                isWorkout
+                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+              }`}
+            >
+              <div className="flex items-center space-x-1.5">
+                <span className="text-sm">🏃</span>
+                <span>{isWorkout ? '운동 완료 기록됨' : '오늘 운동 기록하기'}</span>
+              </div>
+              <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${isWorkout ? 'bg-white text-emerald-700' : 'bg-emerald-200/70 text-emerald-900'}`}>
+                {isWorkout ? '완료 ✓' : '체크하기'}
+              </span>
+            </button>
+
             <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
               <div className="text-xs font-bold text-slate-500 flex items-center justify-between">
                 <span>등록된 일정 ({dayEvents.length})</span>
@@ -980,7 +1067,7 @@
                 className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition shadow-xs flex items-center justify-center space-x-1.5"
               >
                 <i className="fa-solid fa-pen-to-square text-[11px]"></i>
-                <span>일정 등록 / 수정하기</span>
+                <span>일정 등록 / 상세 수정</span>
               </button>
             </div>
           </div>
@@ -990,6 +1077,8 @@
 
     function DateDetailModal({
       dateStr,
+      isWorkout,
+      onToggleWorkout,
       onClose,
       settings,
       overrideShift,
@@ -1039,7 +1128,7 @@
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-300 mt-0.5">근무 수정 및 개인 일정 등록</p>
+                <p className="text-xs text-slate-300 mt-0.5">근무 수정, 운동 체크 및 일정 관리</p>
               </div>
               <button onClick={onClose} className="p-1 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition">
                 <i className="fa-solid fa-xmark text-lg"></i>
@@ -1047,6 +1136,40 @@
             </div>
 
             <div className="p-5 space-y-5 max-h-[80vh] overflow-y-auto">
+              {/* 1. 운동 완료 원터치 체크 영역 */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  운동 기록
+                </label>
+                <button
+                  type="button"
+                  onClick={onToggleWorkout}
+                  className={`w-full p-3 rounded-xl border transition flex items-center justify-between ${
+                    isWorkout
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                      : 'bg-emerald-50/70 text-emerald-900 border-emerald-200 hover:bg-emerald-100'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <span className="text-lg">🏃</span>
+                    <div className="text-left">
+                      <div className="font-bold text-xs">{isWorkout ? '오늘 운동 완료!' : '오늘 운동 완료 체크하기'}</div>
+                      <div className={`text-[10px] ${isWorkout ? 'text-emerald-100' : 'text-emerald-700'}`}>
+                        {isWorkout ? '먼슬리 달력 칸이 초록색으로 표시됩니다' : '터치하여 운동 완료를 기록하세요'}
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-bold px-3 py-1.5 rounded-lg transition ${
+                    isWorkout ? 'bg-white text-emerald-700 shadow-2xs' : 'bg-emerald-200/80 text-emerald-900'
+                  }`}>
+                    {isWorkout ? '✓ 완료' : '미완료'}
+                  </span>
+                </button>
+              </div>
+
+              <hr className="border-slate-100" />
+
+              {/* 2. 근무 설정 영역 */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                   오늘의 근무 설정
@@ -1103,6 +1226,7 @@
 
               <hr className="border-slate-100" />
 
+              {/* 3. 개인 일정 등록/목록 영역 */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                   개인 일정 ({events.length})
