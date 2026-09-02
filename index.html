@@ -5,18 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>스케줄 근무 및 일정 관리</title>
 
+  <!-- 앱 아이콘 및 파비콘 설정 -->
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="shortcut icon" href="icon.png">
   <meta name="apple-mobile-web-app-title" content="근무표">
 
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- html2canvas for instant image export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     body {
@@ -41,6 +46,7 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
 
+    // --- 한국 공휴일 데이터 ---
     const HOLIDAYS_DATA = {
       "01-01": "신정",
       "03-01": "삼일절",
@@ -506,32 +512,36 @@
                       onMouseDown={() => handleCellTouchStart(day)}
                       onMouseUp={handleCellTouchEnd}
                       onClick={() => handleCellClick(day)}
-                      className={`min-h-[105px] sm:min-h-[120px] p-1.5 transition cursor-pointer flex flex-col justify-between group hover:brightness-95 active:scale-[0.99] ${cellBgStyle} ${
+                      className={`min-h-[100px] sm:min-h-[115px] p-1.5 transition cursor-pointer flex flex-col justify-between group hover:brightness-95 active:scale-[0.99] ${cellBgStyle} ${
                         day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""
                       }`}
                     >
                       <div>
-                        <div className="flex items-start justify-between leading-none">
-                          <span className={`text-xs sm:text-sm ${dateNumColor}`}>
-                            {day.dayNum}
-                          </span>
+                        {/* 📌 공휴일 이름을 날짜 밑이 아니라 날짜 옆에 두어 주당비 레이아웃 고정 */}
+                        <div className="flex items-center justify-between leading-none">
+                          <div className="flex items-center space-x-1 truncate">
+                            <span className={`text-xs sm:text-sm ${dateNumColor}`}>
+                              {day.dayNum}
+                            </span>
+                            {day.holidayName && day.isCurrentMonth && (
+                              <span className={`text-[9.5px] font-semibold truncate ${
+                                day.isWorkout ? 'text-rose-200 font-bold' : 'text-red-500'
+                              }`}>
+                                {day.holidayName}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* 운동 배지 */}
                           {day.workoutInfo && day.isCurrentMonth && (
                             <span 
-                              className="text-[11px] bg-[#142862] text-white border border-blue-300/40 rounded-md px-1 py-0.2 font-bold shadow-xs flex items-center justify-center"
+                              className="text-[11px] bg-[#142862] text-white border border-blue-300/40 rounded-md px-1 py-0.2 font-bold shadow-xs flex items-center justify-center shrink-0"
                               title={day.workoutInfo.label}
                             >
                               {day.workoutInfo.icon}
                             </span>
                           )}
                         </div>
-
-                        {day.holidayName && day.isCurrentMonth && (
-                          <div className={`text-[9px] font-semibold truncate leading-tight mt-0.5 ${
-                            day.isWorkout ? 'text-rose-200 font-bold' : 'text-red-500'
-                          }`}>
-                            {day.holidayName}
-                          </div>
-                        )}
                       </div>
 
                       <div className="my-0.5 flex flex-col items-center justify-center">
@@ -541,6 +551,7 @@
                         />
                       </div>
 
+                      {/* 등록된 일정 목록 */}
                       <div className="space-y-0.5 mt-auto max-h-[34px] overflow-hidden">
                         {day.dayEvents.slice(0, 1).map((evt) => (
                           <div
@@ -775,7 +786,8 @@
                   <i className="fa-solid fa-calendar-days text-lg"></i>
                 </div>
 
-                <div>
+                {/* 📌 1번 수정: 상단 텍스트(설명 글씨) 제거 및 연월과 '오늘' 버튼 가로 배치 */}
+                <div className="flex items-center space-x-3">
                   <div
                     onTouchStart={handleHeaderTouchStart}
                     onTouchEnd={handleHeaderTouchEnd}
@@ -792,25 +804,17 @@
                         ? `${currDate.getFullYear()}년 ${currDate.getMonth() + 1}월`
                         : weekRangeText}
                     </h1>
-                    <span className="text-xs text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded-md group-hover:bg-blue-100 transition">
-                      {viewMode === 'yearly' ? '달력 보기' : '12달 선택'}
-                    </span>
                   </div>
-                  <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">
-                    {viewMode === 'yearly'
-                      ? '한 해 12달 전체 선택 (좌우 슬라이드로 연도 이동)'
-                      : viewMode === 'monthly'
-                      ? '월간 근무 및 일정 (상단 연월 길게 누르면 이미지 저장 및 공유)'
-                      : '주간 상세 스케줄 (좌우 슬라이드로 주 이동)'}
-                  </p>
+
+                  {/* 📌 2번 수정: 오늘 버튼을 연월 바로 옆 가로 배치 */}
+                  <button onClick={goToday} className="px-3 py-1 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition active:scale-95 shadow-2xs">
+                    오늘
+                  </button>
                 </div>
                 
-                <div className="flex items-center space-x-1 pl-1 sm:pl-4">
+                <div className="flex items-center space-x-1 pl-1">
                   <button onClick={handlePrev} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition active:scale-90">
                     <i className="fa-solid fa-chevron-left text-xs"></i>
-                  </button>
-                  <button onClick={goToday} className="px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md transition active:scale-95">
-                    오늘
                   </button>
                   <button onClick={handleNext} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition active:scale-90">
                     <i className="fa-solid fa-chevron-right text-xs"></i>
@@ -925,11 +929,11 @@
                 <span>🏃 달리기</span>
                 <span className="text-blue-600 font-extrabold text-sm pl-0.5">{monthSummary.달리기}</span>
               </div>
-              <div className="flex items-center space-x-1 bg-indigo-50/80 text-indigo-900 px-2 py-1.5 rounded-xl border border-indigo-100 text-xs font-bold flex-[1.5] sm:flex-none justify-center">
+              <div className="flex items-center space-x-1 bg-indigo-50/80 text-indigo-900 px-2 py-1.5 rounded-xl border border-indigo-100 text-xs font-bold flex-[1.4] sm:flex-none justify-center">
                 <span>🏋️ 크로스핏</span>
                 <span className="text-indigo-600 font-extrabold text-sm pl-0.5">{monthSummary.크로스핏}</span>
               </div>
-              <div className="flex items-center space-x-1 bg-[#1e3a8a] text-white px-2 py-1.5 rounded-xl text-xs font-bold shadow-xs flex-[0.8] sm:flex-none justify-center">
+              <div className="flex items-center space-x-1 bg-[#1e3a8a] text-white px-2 py-1.5 rounded-xl text-xs font-bold shadow-xs flex-1 sm:flex-none justify-center">
                 <span>총 운동</span>
                 <span className="text-blue-200 font-black text-sm pl-0.5">{monthSummary.총운동}</span>
               </div>
@@ -938,7 +942,7 @@
 
           <div className="mt-2 mb-1 text-center select-none">
             <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">
-              근무표 v1.5.5
+              근무표 v1.6.0
             </span>
           </div>
 
@@ -1288,12 +1292,19 @@
                             key={idx}
                             className={`min-h-[72px] p-1.5 flex flex-col justify-between ${cellBgStyle}`}
                           >
-                            <div className="flex items-start justify-between leading-none">
-                              <span className={`text-[11px] font-bold ${numColor}`}>
-                                {day.dayNum}
-                              </span>
+                            <div className="flex items-center justify-between leading-none">
+                              <div className="flex items-center space-x-1 truncate">
+                                <span className={`text-[11px] font-bold ${numColor}`}>
+                                  {day.dayNum}
+                                </span>
+                                {day.holidayName && day.isCurrentMonth && (
+                                  <span className="text-[8.5px] text-red-500 truncate font-semibold">
+                                    {day.holidayName}
+                                  </span>
+                                )}
+                              </div>
                               {day.workoutInfo && day.isCurrentMonth && (
-                                <span className="text-[10px] leading-none" title={day.workoutInfo.label}>
+                                <span className="text-[10px] leading-none shrink-0" title={day.workoutInfo.label}>
                                   {day.workoutInfo.icon}
                                 </span>
                               )}
@@ -1798,7 +1809,7 @@
                   />
                   <button
                     type="submit"
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition shadow-xs"
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition shadow-xs"
                   >
                     일정 등록하기
                   </button>
