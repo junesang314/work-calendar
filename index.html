@@ -243,9 +243,6 @@
         setDragX(dir === -1 ? -containerWidth : containerWidth);
       };
 
-      const handlePrev = () => triggerPageChange(1);
-      const handleNext = () => triggerPageChange(-1);
-
       const goToday = () => {
         setCurrentDate(new Date());
         setDragX(0);
@@ -517,7 +514,6 @@
                       }`}
                     >
                       <div>
-                        {/* 📌 공휴일 이름을 날짜 밑이 아니라 날짜 옆에 두어 주당비 레이아웃 고정 */}
                         <div className="flex items-center justify-between leading-none">
                           <div className="flex items-center space-x-1 truncate">
                             <span className={`text-xs sm:text-sm ${dateNumColor}`}>
@@ -786,7 +782,7 @@
                   <i className="fa-solid fa-calendar-days text-lg"></i>
                 </div>
 
-                {/* 📌 1번 수정: 상단 텍스트(설명 글씨) 제거 및 연월과 '오늘' 버튼 가로 배치 */}
+                {/* 상단 연월 및 '오늘' 버튼 가로 배치 (좌우 월 넘김 버튼 삭제 완료) */}
                 <div className="flex items-center space-x-3">
                   <div
                     onTouchStart={handleHeaderTouchStart}
@@ -806,18 +802,8 @@
                     </h1>
                   </div>
 
-                  {/* 📌 2번 수정: 오늘 버튼을 연월 바로 옆 가로 배치 */}
                   <button onClick={goToday} className="px-3 py-1 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition active:scale-95 shadow-2xs">
                     오늘
-                  </button>
-                </div>
-                
-                <div className="flex items-center space-x-1 pl-1">
-                  <button onClick={handlePrev} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition active:scale-90">
-                    <i className="fa-solid fa-chevron-left text-xs"></i>
-                  </button>
-                  <button onClick={handleNext} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition active:scale-90">
-                    <i className="fa-solid fa-chevron-right text-xs"></i>
                   </button>
                 </div>
               </div>
@@ -942,7 +928,7 @@
 
           <div className="mt-2 mb-1 text-center select-none">
             <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">
-              근무표 v1.6.0
+              근무표 v1.6.1
             </span>
           </div>
 
