@@ -646,7 +646,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.2.7 (Email Encoding Fix)</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.2.8 (Valid Domain Fix)</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -705,9 +705,9 @@
           return;
         }
 
-        // 한글 아이디를 안전한 이메일 형식(Base64 인코딩)으로 변환
+        // 유효한 표준 도메인 형태로 인코딩 변환
         const encodedId = btoa(unescape(encodeURIComponent(cleanId))).replace(/=/g, '');
-        const pseudoEmail = `user_${encodedId}@work.calendar`;
+        const pseudoEmail = `user_${encodedId}@work-calendar.com`;
         const securePassword = `${pinInput}__work_pin_salt`;
 
         if (isSignUp) {
