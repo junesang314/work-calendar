@@ -654,7 +654,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.1</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.2</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -674,23 +674,131 @@
           )}
 
           {selectedDateStr && (
-            <DateDetailModal 
-              dateStr={selectedDateStr} 
-              workoutParsed={parseWorkout(workouts[selectedDateStr])} 
-              onSaveWorkout={(types, details) => updateWorkoutData(selectedDateStr, types, details)} 
-              onClose={() => setSelectedDateStr(null)} 
-              settings={settings} 
-              overrideShift={overrides[selectedDateStr]} 
-              onSetOverride={(shift) => { if (shift === null) { const copy = { ...overrides }; delete copy[selectedDateStr]; setOverrides(copy); } else { setOverrides({ ...overrides, [selectedDateStr]: shift }); } }} 
-              events={events[selectedDateStr] || []} 
-              onAddEvent={(newEvent) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: [...list, newEvent] }); }} 
-              onDeleteEvent={(eventId) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: list.filter((e) => e.id !== eventId) }); }} 
-            />
+            isWorkoutMode ? (
+              <WorkoutOnlyModal 
+                dateStr={selectedDateStr} 
+                workoutParsed={parseWorkout(workouts[selectedDateStr])} 
+                onSaveWorkout={(types, details) => updateWorkoutData(selectedDateStr, types, details)} 
+                onClose={() => setSelectedDateStr(null)} 
+              />
+            ) : (
+              <DateDetailModal 
+                dateStr={selectedDateStr} 
+                workoutParsed={parseWorkout(workouts[selectedDateStr])} 
+                onSaveWorkout={(types, details) => updateWorkoutData(selectedDateStr, types, details)} 
+                onClose={() => setSelectedDateStr(null)} 
+                settings={settings} 
+                overrideShift={overrides[selectedDateStr]} 
+                onSetOverride={(shift) => { if (shift === null) { const copy = { ...overrides }; delete copy[selectedDateStr]; setOverrides(copy); } else { setOverrides({ ...overrides, [selectedDateStr]: shift }); } }} 
+                events={events[selectedDateStr] || []} 
+                onAddEvent={(newEvent) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: [...list, newEvent] }); }} 
+                onDeleteEvent={(eventId) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: list.filter((e) => e.id !== eventId) }); }} 
+              />
+            )
           )}
 
           {isShareModalOpen && (<ShareCaptureModal currDate={currDate} monthlyDays={currMonthlyDays} monthSummary={monthSummary} onClose={() => setIsShareModalOpen(false)} />)}
           {isSettingsOpen && (<SettingsModal settings={settings} onSave={(newSettings) => { setSettings(newSettings); setIsSettingsOpen(false); }} onClose={() => setIsSettingsOpen(false)} />)}
           {isAuthModalOpen && (<AuthModal user={user} onLogin={(u) => { setUser(u); localStorage.setItem('shift_app_custom_user', u); setIsAuthModalOpen(false); }} onLogout={() => { setUser(null); localStorage.removeItem('shift_app_custom_user'); setIsAuthModalOpen(false); }} onClose={() => setIsAuthModalOpen(false)} />)}
+        </div>
+      );
+    }
+
+    function WorkoutOnlyModal({ dateStr, workoutParsed, onSaveWorkout, onClose }) {
+      const [selectedTypes, setSelectedTypes] = useState(workoutParsed.types || []);
+      const [runningTime, setRunningTime] = useState(workoutParsed.details.runningTime || '');
+      const [distance, setDistance] = useState(workoutParsed.details.distance || '');
+      const [wod, setWod] = useState(workoutParsed.details.wod || '');
+
+      const toggleWorkoutType = (type) => {
+        let next;
+        if (selectedTypes.includes(type)) {
+          next = selectedTypes.filter(t => t !== type);
+        } else {
+          next = [...selectedTypes, type];
+        }
+        setSelectedTypes(next);
+        onSaveWorkout(next, { runningTime, distance, wod });
+      };
+
+      const handleDetailChange = (field, val) => {
+        if (field === 'runningTime') setRunningTime(val);
+        if (field === 'distance') setDistance(val);
+        if (field === 'wod') setWod(val);
+
+        const newDetails = {
+          runningTime: field === 'runningTime' ? val : runningTime,
+          distance: field === 'distance' ? val : distance,
+          wod: field === 'wod' ? val : wod,
+        };
+        onSaveWorkout(selectedTypes, newDetails);
+      };
+
+      const dateObj = new Date(dateStr + 'T00:00:00');
+      const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dateObj.getDay()];
+      const holidayName = getHolidayName(dateStr);
+
+      return (
+        <div onClick={onClose} className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[100] flex items-center justify-center p-3 sm:p-4">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 flex flex-col">
+            <div className="bg-indigo-950 text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-base sm:text-lg font-bold">{dateStr} ({dayOfWeekKorean}) 운동 기록</h3>
+                  {holidayName && (<span className="bg-red-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">{holidayName}</span>)}
+                </div>
+                <p className="text-[11px] text-indigo-300 mt-0.5">러닝 및 크로스핏 상세 기록 관리</p>
+              </div>
+              <button onClick={onClose} className="p-1.5 hover:bg-indigo-900 rounded-xl text-indigo-300 hover:text-white transition"><i className="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div className="p-4 sm:p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">운동 선택 (중복 선택 가능)</label>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <button type="button" onClick={() => toggleWorkoutType('running')} className={`p-3 rounded-2xl border transition flex items-center space-x-2.5 ${selectedTypes.includes('running') ? 'bg-indigo-900 text-white border-indigo-900 shadow-sm ring-2 ring-indigo-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
+                    <span className="text-2xl">🏃</span>
+                    <div className="text-left">
+                      <div className="font-bold text-xs">달리기</div>
+                      <div className={`text-[10px] ${selectedTypes.includes('running') ? 'text-indigo-200' : 'text-slate-400'}`}>{selectedTypes.includes('running') ? '선택됨' : '선택하기'}</div>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => toggleWorkoutType('crossfit')} className={`p-3 rounded-2xl border transition flex items-center space-x-2.5 ${selectedTypes.includes('crossfit') ? 'bg-indigo-900 text-white border-indigo-900 shadow-sm ring-2 ring-indigo-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
+                    <span className="text-2xl">🏋️</span>
+                    <div className="text-left">
+                      <div className="font-bold text-xs">크로스핏</div>
+                      <div className={`text-[10px] ${selectedTypes.includes('crossfit') ? 'text-indigo-200' : 'text-slate-400'}`}>{selectedTypes.includes('crossfit') ? '선택됨' : '선택하기'}</div>
+                    </div>
+                  </button>
+                </div>
+
+                {selectedTypes.includes('running') && (
+                  <div className="bg-blue-50/70 p-3 rounded-2xl border border-blue-100 space-y-2 mb-2">
+                    <div className="text-xs font-bold text-blue-900 flex items-center space-x-1"><span>🏃 러닝 세부 기록</span></div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">러닝 시간</label>
+                        <input type="text" placeholder="예: 32분 10초" value={runningTime} onChange={(e) => handleDetailChange('runningTime', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">러닝 거리</label>
+                        <input type="text" placeholder="예: 5.2 km" value={distance} onChange={(e) => handleDetailChange('distance', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedTypes.includes('crossfit') && (
+                  <div className="bg-indigo-50/70 p-3 rounded-2xl border border-indigo-100 space-y-2">
+                    <div className="text-xs font-bold text-indigo-900 flex items-center space-x-1"><span>🏋️ 크로스핏 와드 및 기록</span></div>
+                    <textarea placeholder="와드 내용 및 기록을 적어주세요 (예: Fran 4:12 RX'd)" value={wod} onChange={(e) => handleDetailChange('wod', e.target.value)} rows="3" className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-medium resize-none"></textarea>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="bg-slate-50 px-5 py-3 border-t border-slate-100 flex justify-end shrink-0">
+              <button onClick={onClose} className="px-5 py-2 bg-indigo-900 text-white text-xs font-semibold rounded-xl hover:bg-indigo-950 transition">확인</button>
+            </div>
+          </div>
         </div>
       );
     }
