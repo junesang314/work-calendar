@@ -448,21 +448,11 @@
                         </div>
                       </div>
                       <div className="my-0.5 flex flex-col items-center justify-center">
-                        {isWorkoutMode ? (
-                          <div className="text-[10px] font-bold text-slate-500/80">
-                            {day.isCurrentMonth && day.shiftInfo.shift}
-                          </div>
-                        ) : (
-                          <ShiftBadge info={day.shiftInfo} isDarkBg={day.hasWorkout && day.isCurrentMonth} />
-                        )}
+                        <ShiftBadge info={day.shiftInfo} isDarkBg={day.hasWorkout && day.isCurrentMonth} />
                       </div>
                       <div className="space-y-0.5 mt-auto max-h-[34px] overflow-hidden">
                         {isWorkoutMode ? (
-                          day.hasWorkout && day.isCurrentMonth ? (
-                            <div className="text-[9px] bg-purple-50 text-purple-900 border border-purple-200 px-1 py-0.5 rounded truncate font-semibold">
-                              {day.workoutParsed.details.wod || day.workoutParsed.details.runningTime || '운동 기록 있음'}
-                            </div>
-                          ) : null
+                          null
                         ) : (
                           <>
                             {day.dayEvents.slice(0, 1).map((evt) => (
@@ -645,7 +635,6 @@
             </div>
           </div>
 
-          {/* 하단 통계 바 터치 시 운동 모드 토글 */}
           <div onClick={() => setIsWorkoutMode(!isWorkoutMode)} className={`mt-2 rounded-2xl p-2.5 sm:p-3 shadow-sm border flex flex-col sm:flex-row items-center justify-between gap-2 select-none cursor-pointer transition-all ${isWorkoutMode ? 'bg-indigo-900 text-white border-indigo-950 ring-2 ring-indigo-400/50' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
             <div className="flex items-center space-x-2.5 w-full sm:w-auto">
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm shadow-xs shrink-0 ${isWorkoutMode ? 'bg-indigo-700 text-white' : 'bg-[#1e3a8a] text-white'}`}>💪</div>
@@ -665,7 +654,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.0 (Advanced Workout Support)</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.1</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -1057,7 +1046,6 @@
               <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"><i className="fa-solid fa-xmark text-base"></i></button>
             </div>
             
-            {/* 운동 상세 미리보기 영역 */}
             <div className="space-y-1.5">
               <div className="text-xs font-bold text-slate-500">운동 기록</div>
               {hasWorkout ? (
@@ -1167,7 +1155,6 @@
             </div>
             <div className="p-4 sm:p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
               
-              {/* 운동 선택 및 상세 입력 영역 */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">운동 기록 (중복 선택 가능)</label>
                 <div className="grid grid-cols-2 gap-2 mb-3">
@@ -1187,7 +1174,6 @@
                   </button>
                 </div>
 
-                {/* 달리기 세부 입력 */}
                 {selectedTypes.includes('running') && (
                   <div className="bg-blue-50/70 p-3 rounded-2xl border border-blue-100 space-y-2 mb-2">
                     <div className="text-xs font-bold text-blue-900 flex items-center space-x-1"><span>🏃 러닝 세부 기록</span></div>
@@ -1204,7 +1190,6 @@
                   </div>
                 )}
 
-                {/* 크로스핏 세부 입력 */}
                 {selectedTypes.includes('crossfit') && (
                   <div className="bg-indigo-50/70 p-3 rounded-2xl border border-indigo-100 space-y-2">
                     <div className="text-xs font-bold text-indigo-900 flex items-center space-x-1"><span>🏋️ 크로스핏 와드 및 기록</span></div>
