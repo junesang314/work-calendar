@@ -34,9 +34,8 @@
     const { useState, useEffect, useMemo, useRef } = React;
 
     const SUPABASE_URL = 'https://vpwfnoqrmcerddtyatst.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_XcbXQ1PwLWWwKwL-lZ6hnw_WvR2j_zQ';
+    const SUPABASE_ANON_KEY = '여기에_복사한_Publishable_key를_붙여넣으세요';
     
-    // 안전한 Supabase 클라이언트 팩토리
     const getSupabase = () => {
       if (window.supabase && typeof window.supabase.createClient === 'function') {
         return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
