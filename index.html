@@ -467,6 +467,7 @@
                         )}
                       </div>
                       <div className="space-y-0.5 mt-auto max-h-[34px] overflow-hidden">
+                        {/* [Step 6 반영] 운동 모드일 때는 개인 일정을 완전히 배제하여 깔끔하게 유지 */}
                         {isWorkoutMode ? (
                           null
                         ) : (
@@ -670,7 +671,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.8-step5</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.5.0</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -753,7 +754,6 @@
       return <span className="w-6 h-6 sm:w-7 sm:h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs">{shift.substring(0, 1)}</span>;
     }
 
-    // [Step 5 반영] 넉넉하고 확장된 미리보기 및 운동 기록 직접 확인 팝업
     function WorkoutPreviewPopup({ dayInfo, workoutParsed, onSaveWorkout, onClose }) {
       const { dateStr, holidayName, shiftInfo, dayOfWeek } = dayInfo;
       const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dayOfWeek];
