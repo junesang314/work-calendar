@@ -504,21 +504,51 @@
                   const isSaturday = day.dayOfWeek === 6;
                   const isHoliday = !!day.holidayName;
                   const dayNames = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
-                  let headerBg = "bg-slate-50 text-slate-700";
-                  let dateNumColor = "text-slate-800";
-                  if (day.isToday) { headerBg = "bg-blue-600 text-white"; dateNumColor = "text-white"; }
-                  else if (isSunday || isHoliday) dateNumColor = "text-red-500";
-                  else if (isSaturday) dateNumColor = "text-blue-500";
+                  
+                  // [수정사항: 위클리 나이트 모드 적용]
+                  let headerBg = isWorkoutMode ? "bg-slate-950/80 text-slate-300" : "bg-slate-50 text-slate-700";
+                  let dateNumColor = isWorkoutMode ? "text-slate-100" : "text-slate-800";
+                  
+                  if (day.isToday) { 
+                    headerBg = "bg-blue-600 text-white"; 
+                    dateNumColor = "text-white"; 
+                  } else if (isSunday || isHoliday) {
+                    dateNumColor = isWorkoutMode ? "text-amber-300" : "text-red-500";
+                  } else if (isSaturday) {
+                    dateNumColor = isWorkoutMode ? "text-amber-300" : "text-blue-500";
+                  }
 
                   const shift = day.shiftInfo.shift;
-                  let shiftBoxStyle = "bg-white border-slate-200";
-                  let shiftLabelStyle = "text-slate-600 font-medium";
-                  if (shift === '주간') { shiftBoxStyle = "bg-amber-100/90 border-amber-300"; shiftLabelStyle = "text-amber-950 font-bold"; }
-                  else if (shift === '당직') { shiftBoxStyle = "bg-blue-100/90 border-blue-300"; shiftLabelStyle = "text-blue-950 font-bold"; }
-                  else if (shift === '비번') { shiftBoxStyle = "bg-rose-100/80 border-rose-200"; shiftLabelStyle = "text-rose-900 font-bold"; }
+                  let shiftBoxStyle = isWorkoutMode ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-white border-slate-200";
+                  let shiftLabelStyle = isWorkoutMode ? "text-slate-300 font-medium" : "text-slate-600 font-medium";
+                  
+                  if (shift === '주간') { 
+                    shiftBoxStyle = isWorkoutMode ? "bg-amber-950/60 border-amber-800/80 text-amber-200" : "bg-amber-100/90 border-amber-300"; 
+                    shiftLabelStyle = isWorkoutMode ? "text-amber-300 font-bold" : "text-amber-950 font-bold"; 
+                  } else if (shift === '당직') { 
+                    shiftBoxStyle = isWorkoutMode ? "bg-blue-950/60 border-blue-800/80 text-blue-200" : "bg-blue-100/90 border-blue-300"; 
+                    shiftLabelStyle = isWorkoutMode ? "text-blue-300 font-bold" : "text-blue-950 font-bold"; 
+                  } else if (shift === '비번') { 
+                    shiftBoxStyle = isWorkoutMode ? "bg-rose-950/60 border-rose-800/80 text-rose-200" : "bg-rose-100/80 border-rose-200"; 
+                    shiftLabelStyle = isWorkoutMode ? "text-rose-300 font-bold" : "text-rose-900 font-bold"; 
+                  }
+
+                  // 위클리 카드 배경 스타일 (운동 모드 시 다크 테마 + 운동 완료 시 앰버 보색 테두리)
+                  let cardBg = isWorkoutMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200";
+                  if (day.hasWorkout) {
+                    cardBg = isWorkoutMode ? "bg-amber-950/40 border-amber-600/70 ring-2 ring-amber-600/50 text-white" : "bg-blue-50/40 ring-2 ring-blue-800 border-blue-800";
+                  }
 
                   return (
-                    <div key={idx} className={`bg-white rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden ${day.hasWorkout ? "ring-2 ring-amber-600 border-amber-600 bg-amber-50/40" : ""} ${day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"}`}>
+                    <div 
+                      key={idx} 
+                      onTouchStart={() => handleCellTouchStart(day)}
+                      onTouchEnd={handleCellTouchEnd}
+                      onMouseDown={() => handleCellTouchStart(day)}
+                      onMouseUp={handleCellTouchEnd}
+                      onClick={() => handleCellClick(day)}
+                      className={`rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden cursor-pointer hover:brightness-110 ${cardBg} ${day.isToday ? "ring-2 ring-blue-500 border-blue-500" : ""}`}
+                    >
                       <div className={`p-2.5 border-b flex items-center justify-between ${headerBg}`}>
                         <div>
                           <div className="text-[11px] font-semibold opacity-90">{dayNames[day.dayOfWeek]}</div>
@@ -535,33 +565,38 @@
                             </div>
                           )}
                           {day.holidayName && (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${day.isToday ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'}`}>{day.holidayName}</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${day.isToday ? 'bg-red-500 text-white' : (isWorkoutMode ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-red-100 text-red-600')}`}>{day.holidayName}</span>
                           )}
                         </div>
                       </div>
                       <div className="p-2.5 flex-1 flex flex-col justify-between space-y-2.5">
                         <div className={`flex items-center justify-between p-2 rounded-xl border transition ${shiftBoxStyle}`}>
                           <span className={`text-xs ${shiftLabelStyle}`}>오늘의 근무</span>
-                          <ShiftBadge info={day.shiftInfo} />
+                          <ShiftBadge info={day.shiftInfo} isDarkBg={isWorkoutMode} />
                         </div>
-                        <div className="space-y-1 flex-1 min-h-[70px]">
-                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">일정 ({day.dayEvents.length})</div>
-                          {day.dayEvents.length > 0 ? (
-                            day.dayEvents.map((evt) => (
-                              <div key={evt.id} className="text-[11px] bg-emerald-50 hover:bg-emerald-100 text-emerald-900 p-1.5 rounded-lg border border-emerald-200/80 space-y-0.5 shadow-2xs">
-                                <div className="font-bold flex items-center justify-between">
-                                  <span>{evt.title}</span>
-                                  {evt.time && <span className="text-[9px] text-emerald-700 font-bold bg-white/80 px-1 py-0.2 rounded border border-emerald-200/60">{evt.time}</span>}
+                        
+                        {/* 운동 모드일 때는 위클리에서도 개인 일정을 배제 */}
+                        {!isWorkoutMode && (
+                          <div className="space-y-1 flex-1 min-h-[70px]">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">일정 ({day.dayEvents.length})</div>
+                            {day.dayEvents.length > 0 ? (
+                              day.dayEvents.map((evt) => (
+                                <div key={evt.id} className="text-[11px] bg-emerald-50 hover:bg-emerald-100 text-emerald-900 p-1.5 rounded-lg border border-emerald-200/80 space-y-0.5 shadow-2xs">
+                                  <div className="font-bold flex items-center justify-between">
+                                    <span>{evt.title}</span>
+                                    {evt.time && <span className="text-[9px] text-emerald-700 font-bold bg-white/80 px-1 py-0.2 rounded border border-emerald-200/60">{evt.time}</span>}
+                                  </div>
+                                  {evt.note && <div className="text-[9.5px] text-emerald-700/80 leading-tight">{evt.note}</div>}
                                 </div>
-                                {evt.note && <div className="text-[9.5px] text-emerald-700/80 leading-tight">{evt.note}</div>}
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-[10px] text-slate-300 text-center py-4">일정 없음</div>
-                          )}
-                        </div>
-                        <button onClick={() => setSelectedDateStr(day.dateStr)} className="w-full py-1 text-xs font-medium text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center justify-center space-x-1">
-                          <i className="fa-solid fa-pen text-[10px]"></i><span>일정/운동/근무 상세 수정</span>
+                              ))
+                            ) : (
+                              <div className="text-[10px] text-slate-500 text-center py-4">일정 없음</div>
+                            )}
+                          </div>
+                        )}
+
+                        <button onClick={(e) => { e.stopPropagation(); setSelectedDateStr(day.dateStr); }} className={`w-full py-1.5 text-xs font-medium rounded-lg transition flex items-center justify-center space-x-1 ${isWorkoutMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>
+                          <i className="fa-solid fa-pen text-[10px]"></i><span>상세 수정</span>
                         </button>
                       </div>
                     </div>
@@ -575,9 +610,9 @@
         if (viewMode === 'yearly') {
           const y = targetDate.getFullYear();
           return (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5">
+            <div className={`rounded-2xl shadow-sm border p-4 sm:p-5 transition-colors ${isWorkoutMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
               <div className="text-center mb-3">
-                <h2 className="text-base sm:text-lg font-bold text-slate-800">{y}년 전체 달력 선택</h2>
+                <h2 className={`text-base sm:text-lg font-bold ${isWorkoutMode ? 'text-white' : 'text-slate-800'}`}>{y}년 전체 달력 선택</h2>
                 <p className="text-xs text-slate-400">원하는 월을 터치하여 해당 달로 이동하세요.</p>
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
@@ -585,9 +620,9 @@
                   const isCurrentSelected = currDate.getFullYear() === y && currDate.getMonth() === m;
                   const isThisMonth = today.getFullYear() === y && today.getMonth() === m;
                   return (
-                    <button key={m} onClick={() => { const newDate = new Date(targetDate); newDate.setMonth(m); setCurrentDate(newDate); setViewMode('monthly'); setDragX(0); }} className={`p-3 sm:p-4 rounded-2xl border transition flex flex-col items-center justify-center space-y-0.5 relative active:scale-95 ${isCurrentSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105' : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'}`}>
+                    <button key={m} onClick={() => { const newDate = new Date(targetDate); newDate.setMonth(m); setCurrentDate(newDate); setViewMode('monthly'); setDragX(0); }} className={`p-3 sm:p-4 rounded-2xl border transition flex flex-col items-center justify-center space-y-0.5 relative active:scale-95 ${isCurrentSelected ? 'bg-amber-600 text-white border-amber-600 shadow-md scale-105' : (isWorkoutMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200')}`}>
                       <span className="text-base sm:text-lg font-black">{m + 1}월</span>
-                      {isThisMonth && (<span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${isCurrentSelected ? 'bg-white text-blue-600' : 'bg-blue-100 text-blue-700'}`}>이번달</span>)}
+                      {isThisMonth && (<span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${isCurrentSelected ? 'bg-white text-amber-700' : (isWorkoutMode ? 'bg-amber-950 text-amber-300' : 'bg-blue-100 text-blue-700')}`}>이번달</span>)}
                     </button>
                   );
                 })}
@@ -671,7 +706,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.6.2</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.7.0</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -701,7 +736,6 @@
               dayInfo={workoutPreviewDayInfo} 
               workoutParsed={parseWorkout(workouts[workoutPreviewDayInfo.dateStr])} 
               onOpenEdit={() => {
-                const target = workoutPreviewDayInfo.dateStr;
                 setWorkoutPreviewDayInfo(null);
                 setQuickWorkoutModalDay(workoutPreviewDayInfo);
               }}
@@ -767,7 +801,6 @@
       return <span className="w-6 h-6 sm:w-7 sm:h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs">{shift.substring(0, 1)}</span>;
     }
 
-    // [수정사항 2 반영] 길게 눌렀을 때 뜨는 '운동 기록 요약 및 미리보기' 전용 팝업
     function WorkoutSummaryPopup({ dayInfo, workoutParsed, onOpenEdit, onClose }) {
       const { dateStr, holidayName, shiftInfo, dayOfWeek } = dayInfo;
       const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dayOfWeek];
