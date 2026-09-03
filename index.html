@@ -159,6 +159,7 @@
 
       const [dataLoaded, setDataLoaded] = useState(false);
       const [selectedDateStr, setSelectedDateStr] = useState(null);
+      const [quickWorkoutModalDay, setQuickWorkoutModalDay] = useState(null);
       const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
       useEffect(() => {
@@ -283,7 +284,12 @@
       const handleCellTouchStart = (day) => {
         isLongPressedRef.current = false;
         longPressTimerRef.current = setTimeout(() => {
-          isLongPressedRef.current = true; setPreviewDayInfo(day);
+          isLongPressedRef.current = true;
+          if (isWorkoutMode) {
+            setQuickWorkoutModalDay(day);
+          } else {
+            setPreviewDayInfo(day);
+          }
           if (navigator.vibrate) navigator.vibrate(40);
         }, 450);
       };
@@ -654,7 +660,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.2</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.3</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -673,28 +679,26 @@
             <QuickPreviewPopup dayInfo={previewDayInfo} onClose={() => setPreviewDayInfo(null)} onOpenDetail={() => { const target = previewDayInfo.dateStr; setPreviewDayInfo(null); setSelectedDateStr(target); }} />
           )}
 
+          {quickWorkoutModalDay && (
+            <WorkoutOnlyModal 
+              dateStr={quickWorkoutModalDay.dateStr} 
+              workoutParsed={parseWorkout(workouts[quickWorkoutModalDay.dateStr])} 
+              onSaveWorkout={(types, details) => updateWorkoutData(quickWorkoutModalDay.dateStr, types, details)} 
+              onClose={() => setQuickWorkoutModalDay(null)} 
+            />
+          )}
+
           {selectedDateStr && (
-            isWorkoutMode ? (
-              <WorkoutOnlyModal 
-                dateStr={selectedDateStr} 
-                workoutParsed={parseWorkout(workouts[selectedDateStr])} 
-                onSaveWorkout={(types, details) => updateWorkoutData(selectedDateStr, types, details)} 
-                onClose={() => setSelectedDateStr(null)} 
-              />
-            ) : (
-              <DateDetailModal 
-                dateStr={selectedDateStr} 
-                workoutParsed={parseWorkout(workouts[selectedDateStr])} 
-                onSaveWorkout={(types, details) => updateWorkoutData(selectedDateStr, types, details)} 
-                onClose={() => setSelectedDateStr(null)} 
-                settings={settings} 
-                overrideShift={overrides[selectedDateStr]} 
-                onSetOverride={(shift) => { if (shift === null) { const copy = { ...overrides }; delete copy[selectedDateStr]; setOverrides(copy); } else { setOverrides({ ...overrides, [selectedDateStr]: shift }); } }} 
-                events={events[selectedDateStr] || []} 
-                onAddEvent={(newEvent) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: [...list, newEvent] }); }} 
-                onDeleteEvent={(eventId) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: list.filter((e) => e.id !== eventId) }); }} 
-              />
-            )
+            <DateDetailModal 
+              dateStr={selectedDateStr} 
+              onClose={() => setSelectedDateStr(null)} 
+              settings={settings} 
+              overrideShift={overrides[selectedDateStr]} 
+              onSetOverride={(shift) => { if (shift === null) { const copy = { ...overrides }; delete copy[selectedDateStr]; setOverrides(copy); } else { setOverrides({ ...overrides, [selectedDateStr]: shift }); } }} 
+              events={events[selectedDateStr] || []} 
+              onAddEvent={(newEvent) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: [...list, newEvent] }); }} 
+              onDeleteEvent={(eventId) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: list.filter((e) => e.id !== eventId) }); }} 
+            />
           )}
 
           {isShareModalOpen && (<ShareCaptureModal currDate={currDate} monthlyDays={currMonthlyDays} monthSummary={monthSummary} onClose={() => setIsShareModalOpen(false)} />)}
@@ -709,6 +713,7 @@
       const [runningTime, setRunningTime] = useState(workoutParsed.details.runningTime || '');
       const [distance, setDistance] = useState(workoutParsed.details.distance || '');
       const [wod, setWod] = useState(workoutParsed.details.wod || '');
+      const [record, setRecord] = useState(workoutParsed.details.record || '');
 
       const toggleWorkoutType = (type) => {
         let next;
@@ -718,18 +723,20 @@
           next = [...selectedTypes, type];
         }
         setSelectedTypes(next);
-        onSaveWorkout(next, { runningTime, distance, wod });
+        onSaveWorkout(next, { runningTime, distance, wod, record });
       };
 
       const handleDetailChange = (field, val) => {
         if (field === 'runningTime') setRunningTime(val);
         if (field === 'distance') setDistance(val);
         if (field === 'wod') setWod(val);
+        if (field === 'record') setRecord(val);
 
         const newDetails = {
           runningTime: field === 'runningTime' ? val : runningTime,
           distance: field === 'distance' ? val : distance,
           wod: field === 'wod' ? val : wod,
+          record: field === 'record' ? val : record,
         };
         onSaveWorkout(selectedTypes, newDetails);
       };
@@ -790,7 +797,14 @@
                 {selectedTypes.includes('crossfit') && (
                   <div className="bg-indigo-50/70 p-3 rounded-2xl border border-indigo-100 space-y-2">
                     <div className="text-xs font-bold text-indigo-900 flex items-center space-x-1"><span>🏋️ 크로스핏 와드 및 기록</span></div>
-                    <textarea placeholder="와드 내용 및 기록을 적어주세요 (예: Fran 4:12 RX'd)" value={wod} onChange={(e) => handleDetailChange('wod', e.target.value)} rows="3" className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-medium resize-none"></textarea>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 mb-0.5">와드 내용</label>
+                      <input type="text" placeholder="예: Fran" value={wod} onChange={(e) => handleDetailChange('wod', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-medium mb-2" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 mb-0.5">기록 (타임/라운드 등)</label>
+                      <input type="text" placeholder="예: 4분 12초 RX'd" value={record} onChange={(e) => handleDetailChange('record', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-medium" />
+                    </div>
                   </div>
                 )}
               </div>
@@ -982,7 +996,7 @@
             if (day.hasWorkout) {
               const parts = [];
               if (day.workoutParsed.types.includes('running')) parts.push(`러닝(${day.workoutParsed.details.runningTime || '-'}, ${day.workoutParsed.details.distance || '-'})`);
-              if (day.workoutParsed.types.includes('crossfit')) parts.push(`크로스핏(${day.workoutParsed.details.wod || '-'})`);
+              if (day.workoutParsed.types.includes('crossfit')) parts.push(`크로스핏(${day.workoutParsed.details.wod || '-'} / ${day.workoutParsed.details.record || '-'})`);
               workoutStr = ` [운동: ${parts.join(', ')}]`;
             }
             const eventsText = day.dayEvents.length > 0 ? ` - ${day.dayEvents.map(e => e.time ? `${e.title}(${e.time})` : e.title).join(', ')}` : '';
@@ -1157,20 +1171,24 @@
             <div className="space-y-1.5">
               <div className="text-xs font-bold text-slate-500">운동 기록</div>
               {hasWorkout ? (
-                <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl p-2.5 space-y-1 text-xs">
+                <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl p-2.5 space-y-1.5 text-xs">
                   {workoutParsed.types.includes('running') && (
                     <div className="text-indigo-950 flex items-center justify-between">
                       <span className="font-bold">🏃 러닝</span>
-                      <span className="text-[11px] text-indigo-700 font-semibold">
-                        {workoutParsed.details.runningTime || '-'} / {workoutParsed.details.distance || '-'}
+                      <span className="text-[11px] text-indigo-700 font-semibold whitespace-pre-wrap">
+                        {[workoutParsed.details.runningTime, workoutParsed.details.distance].filter(Boolean).join(' / ') || '-'}
                       </span>
                     </div>
                   )}
                   {workoutParsed.types.includes('crossfit') && (
-                    <div className="text-indigo-950 space-y-0.5">
-                      <div className="font-bold">🏋️ 크로스핏</div>
-                      <div className="text-[11px] text-indigo-800 bg-white/80 p-1 rounded border border-indigo-100">
-                        {workoutParsed.details.wod || '와드 기록 없음'}
+                    <div className="text-indigo-950 space-y-1">
+                      <div className="font-bold flex items-center justify-between">
+                        <span>🏋️ 크로스핏</span>
+                      </div>
+                      <div className="text-[11px] text-indigo-900 bg-white/90 p-1.5 rounded border border-indigo-100 space-y-0.5">
+                        {workoutParsed.details.wod && <div className="font-semibold whitespace-pre-wrap">와드: {workoutParsed.details.wod}</div>}
+                        {workoutParsed.details.record && <div className="text-indigo-700 whitespace-pre-wrap">기록: {workoutParsed.details.record}</div>}
+                        {!workoutParsed.details.wod && !workoutParsed.details.record && <div className="text-slate-400">상세 기록 없음</div>}
                       </div>
                     </div>
                   )}
@@ -1192,50 +1210,21 @@
               ) : (<p className="text-[11px] text-slate-400 text-center py-2 bg-slate-50 rounded-xl border border-dashed">등록된 일정이 없습니다.</p>)}
             </div>
             <button onClick={onOpenDetail} className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center space-x-1.5">
-              <i className="fa-solid fa-pen-to-square text-[11px]"></i><span>운동 및 일정 상세 수정</span>
+              <i className="fa-solid fa-pen-to-square text-[11px]"></i><span>근무 및 일정 상세 수정</span>
             </button>
           </div>
         </div>
       );
     }
 
-    function DateDetailModal({ dateStr, workoutParsed, onSaveWorkout, onClose, settings, overrideShift, onSetOverride, events, onAddEvent, onDeleteEvent }) {
+    function DateDetailModal({ dateStr, onClose, settings, overrideShift, onSetOverride, events, onAddEvent, onDeleteEvent }) {
       const autoCalculated = calculateAutoShift(dateStr, settings);
       const currentShift = overrideShift || autoCalculated.shift;
       const isManual = !!overrideShift;
 
-      const [selectedTypes, setSelectedTypes] = useState(workoutParsed.types || []);
-      const [runningTime, setRunningTime] = useState(workoutParsed.details.runningTime || '');
-      const [distance, setDistance] = useState(workoutParsed.details.distance || '');
-      const [wod, setWod] = useState(workoutParsed.details.wod || '');
-
       const [title, setTitle] = useState('');
       const [time, setTime] = useState('');
       const [note, setNote] = useState('');
-
-      const toggleWorkoutType = (type) => {
-        let next;
-        if (selectedTypes.includes(type)) {
-          next = selectedTypes.filter(t => t !== type);
-        } else {
-          next = [...selectedTypes, type];
-        }
-        setSelectedTypes(next);
-        onSaveWorkout(next, { runningTime, distance, wod });
-      };
-
-      const handleDetailChange = (field, val) => {
-        if (field === 'runningTime') setRunningTime(val);
-        if (field === 'distance') setDistance(val);
-        if (field === 'wod') setWod(val);
-
-        const newDetails = {
-          runningTime: field === 'runningTime' ? val : runningTime,
-          distance: field === 'distance' ? val : distance,
-          wod: field === 'wod' ? val : wod,
-        };
-        onSaveWorkout(selectedTypes, newDetails);
-      };
 
       const handleAddEventSubmit = (e) => {
         e.preventDefault();
@@ -1257,56 +1246,11 @@
                   <h3 className="text-base sm:text-lg font-bold">{dateStr} ({dayOfWeekKorean})</h3>
                   {holidayName && (<span className="bg-red-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">{holidayName}</span>)}
                 </div>
-                <p className="text-[11px] text-slate-300 mt-0.5">근무 수정, 다중 운동 및 상세 기록 관리</p>
+                <p className="text-[11px] text-slate-300 mt-0.5">근무 수정 및 개인 일정 관리</p>
               </div>
               <button onClick={onClose} className="p-1.5 hover:bg-slate-800 rounded-xl text-slate-300 hover:text-white transition"><i className="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <div className="p-4 sm:p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
-              
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">운동 기록 (중복 선택 가능)</label>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <button type="button" onClick={() => toggleWorkoutType('running')} className={`p-2.5 rounded-2xl border transition flex items-center space-x-2.5 ${selectedTypes.includes('running') ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm ring-2 ring-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
-                    <span className="text-2xl">🏃</span>
-                    <div className="text-left">
-                      <div className="font-bold text-xs">달리기</div>
-                      <div className={`text-[10px] ${selectedTypes.includes('running') ? 'text-blue-200' : 'text-slate-400'}`}>{selectedTypes.includes('running') ? '선택됨' : '선택하기'}</div>
-                    </div>
-                  </button>
-                  <button type="button" onClick={() => toggleWorkoutType('crossfit')} className={`p-2.5 rounded-2xl border transition flex items-center space-x-2.5 ${selectedTypes.includes('crossfit') ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm ring-2 ring-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
-                    <span className="text-2xl">🏋️</span>
-                    <div className="text-left">
-                      <div className="font-bold text-xs">크로스핏</div>
-                      <div className={`text-[10px] ${selectedTypes.includes('crossfit') ? 'text-blue-200' : 'text-slate-400'}`}>{selectedTypes.includes('crossfit') ? '선택됨' : '선택하기'}</div>
-                    </div>
-                  </button>
-                </div>
-
-                {selectedTypes.includes('running') && (
-                  <div className="bg-blue-50/70 p-3 rounded-2xl border border-blue-100 space-y-2 mb-2">
-                    <div className="text-xs font-bold text-blue-900 flex items-center space-x-1"><span>🏃 러닝 세부 기록</span></div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">러닝 시간</label>
-                        <input type="text" placeholder="예: 32분 10초" value={runningTime} onChange={(e) => handleDetailChange('runningTime', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium" />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">러닝 거리</label>
-                        <input type="text" placeholder="예: 5.2 km" value={distance} onChange={(e) => handleDetailChange('distance', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {selectedTypes.includes('crossfit') && (
-                  <div className="bg-indigo-50/70 p-3 rounded-2xl border border-indigo-100 space-y-2">
-                    <div className="text-xs font-bold text-indigo-900 flex items-center space-x-1"><span>🏋️ 크로스핏 와드 및 기록</span></div>
-                    <textarea placeholder="와드 내용 및 기록을 적어주세요 (예: Fran 4:12 RX'd)" value={wod} onChange={(e) => handleDetailChange('wod', e.target.value)} rows="2" className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-medium resize-none"></textarea>
-                  </div>
-                )}
-              </div>
-
-              <hr className="border-slate-100" />
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">오늘의 근무 설정</label>
                 <div className="bg-slate-50 rounded-xl p-2.5 mb-2.5 border border-slate-200/80 flex items-center justify-between text-xs">
