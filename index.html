@@ -505,7 +505,6 @@
                   const isHoliday = !!day.holidayName;
                   const dayNames = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
                   
-                  // [수정사항: 위클리 나이트 모드 적용]
                   let headerBg = isWorkoutMode ? "bg-slate-950/80 text-slate-300" : "bg-slate-50 text-slate-700";
                   let dateNumColor = isWorkoutMode ? "text-slate-100" : "text-slate-800";
                   
@@ -519,21 +518,15 @@
                   }
 
                   const shift = day.shiftInfo.shift;
-                  let shiftBoxStyle = isWorkoutMode ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-white border-slate-200";
-                  let shiftLabelStyle = isWorkoutMode ? "text-slate-300 font-medium" : "text-slate-600 font-medium";
                   
-                  if (shift === '주간') { 
-                    shiftBoxStyle = isWorkoutMode ? "bg-amber-950/60 border-amber-800/80 text-amber-200" : "bg-amber-100/90 border-amber-300"; 
-                    shiftLabelStyle = isWorkoutMode ? "text-amber-300 font-bold" : "text-amber-950 font-bold"; 
-                  } else if (shift === '당직') { 
-                    shiftBoxStyle = isWorkoutMode ? "bg-blue-950/60 border-blue-800/80 text-blue-200" : "bg-blue-100/90 border-blue-300"; 
-                    shiftLabelStyle = isWorkoutMode ? "text-blue-300 font-bold" : "text-blue-950 font-bold"; 
-                  } else if (shift === '비번') { 
-                    shiftBoxStyle = isWorkoutMode ? "bg-rose-950/60 border-rose-800/80 text-rose-200" : "bg-rose-100/80 border-rose-200"; 
-                    shiftLabelStyle = isWorkoutMode ? "text-rose-300 font-bold" : "text-rose-900 font-bold"; 
+                  // [수정사항 반영] 운동 모드 위클리에서는 근무 스케줄 박스 강조(색상/테두리) 없이 깔끔하게 텍스트로만 표시
+                  let shiftBoxStyle = isWorkoutMode ? "bg-slate-800/50 border-slate-700/60 text-slate-300" : "bg-white border-slate-200";
+                  if (!isWorkoutMode) {
+                    if (shift === '주간') shiftBoxStyle = "bg-amber-100/90 border-amber-300";
+                    else if (shift === '당직') shiftBoxStyle = "bg-blue-100/90 border-blue-300";
+                    else if (shift === '비번') shiftBoxStyle = "bg-rose-100/80 border-rose-200";
                   }
 
-                  // 위클리 카드 배경 스타일 (운동 모드 시 다크 테마 + 운동 완료 시 앰버 보색 테두리)
                   let cardBg = isWorkoutMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200";
                   if (day.hasWorkout) {
                     cardBg = isWorkoutMode ? "bg-amber-950/40 border-amber-600/70 ring-2 ring-amber-600/50 text-white" : "bg-blue-50/40 ring-2 ring-blue-800 border-blue-800";
@@ -571,11 +564,11 @@
                       </div>
                       <div className="p-2.5 flex-1 flex flex-col justify-between space-y-2.5">
                         <div className={`flex items-center justify-between p-2 rounded-xl border transition ${shiftBoxStyle}`}>
-                          <span className={`text-xs ${shiftLabelStyle}`}>오늘의 근무</span>
-                          <ShiftBadge info={day.shiftInfo} isDarkBg={isWorkoutMode} />
+                          {/* [수정사항 반영] '오늘의 근무' 문구 제거 후 근무 이름만 깔끔하게 표시 */}
+                          <span className={`text-xs ${isWorkoutMode ? 'text-slate-400' : 'text-slate-600 font-medium'}`}>근무</span>
+                          <span className={`text-xs font-bold ${isWorkoutMode ? 'text-slate-200' : 'text-slate-800'}`}>{shift}</span>
                         </div>
                         
-                        {/* 운동 모드일 때는 위클리에서도 개인 일정을 배제 */}
                         {!isWorkoutMode && (
                           <div className="space-y-1 flex-1 min-h-[70px]">
                             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">일정 ({day.dayEvents.length})</div>
@@ -706,7 +699,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.7.0</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.7.1</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
