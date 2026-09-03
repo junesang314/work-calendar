@@ -23,6 +23,8 @@
     .custom-scrollbar::-webkit-scrollbar { width: 3px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen pb-16 sm:pb-6 select-none overflow-x-hidden">
@@ -642,7 +644,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.2.0 (Supabase PIN Sync)</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.2.1 (Supabase PIN Sync)</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -753,7 +755,16 @@
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">PIN 번호 (숫자)</label>
-                  <input type="password" maxLength="8" placeholder="4자리 이상 PIN 번호" value={pinInput} onChange={(e) => setPinInput(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none tracking-widest" required />
+                  <input 
+                    type="number" 
+                    inputMode="numeric" 
+                    pattern="[0-9]*" 
+                    placeholder="4자리 이상 숫자 PIN" 
+                    value={pinInput} 
+                    onChange={(e) => setPinInput(e.target.value)} 
+                    className="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none tracking-widest font-bold text-lg" 
+                    required 
+                  />
                 </div>
                 {message && <p className="text-[11px] text-blue-600 font-semibold text-center">{message}</p>}
                 <button type="submit" disabled={loading} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition">
