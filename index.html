@@ -22,6 +22,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- html2canvas for instant image export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     body {
@@ -45,6 +48,11 @@
 
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
+
+    // --- Supabase 설정 ---
+    const SUPABASE_URL = 'https://vpwfnoqrmcerddtyatst.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_XcbXQ1PwLWWwKwL-lZ6hnw_WvR2j_zQ';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // --- 한국 공휴일 데이터 ---
     const HOLIDAYS_DATA = {
@@ -127,6 +135,9 @@
       const [viewMode, setViewMode] = useState('monthly');
       const [currentDate, setCurrentDate] = useState(new Date());
 
+      const [user, setUser] = useState(null);
+      const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
       const [dragX, setDragX] = useState(0);
       const [isDragging, setIsDragging] = useState(false);
       const [isAnimating, setIsAnimating] = useState(false);
@@ -167,44 +178,102 @@
         toggleYearlyView();
       };
 
-      const [settings, setSettings] = useState(() => {
-        const saved = localStorage.getItem('shift_app_settings');
-        return saved ? JSON.parse(saved) : { anchorDate: '2026-09-01', anchorShift: '당직' };
-      });
+      const [settings, setSettings] = useState({ anchorDate: '2026-09-01', anchorShift: '당직' });
+      const [overrides, setOverrides] = useState({});
+      const [events, setEvents] = useState({});
+      const [workouts, setWorkouts] = useState({});
+      const [dataLoaded, setDataLoaded] = useState(false);
 
-      const [overrides, setOverrides] = useState(() => {
-        const saved = localStorage.getItem('shift_app_overrides');
-        return saved ? JSON.parse(saved) : {};
-      });
-
-      const [events, setEvents] = useState(() => {
-        const saved = localStorage.getItem('shift_app_events');
-        return saved ? JSON.parse(saved) : {};
-      });
-
-      const [workouts, setWorkouts] = useState(() => {
-        const saved = localStorage.getItem('shift_app_workouts');
-        return saved ? JSON.parse(saved) : {};
-      });
-
-      const [selectedDateStr, setSelectedDateStr] = useState(null);
-      const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
+      // 인증 상태 확인 및 데이터 불러오기
       useEffect(() => {
-        localStorage.setItem('shift_app_settings', JSON.stringify(settings));
-      }, [settings]);
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          const currentUser = session?.user ?? null;
+          setUser(currentUser);
+          if (currentUser) {
+            fetchUserData(currentUser.id);
+          } else {
+            loadLocalData();
+          }
+        });
 
-      useEffect(() => {
-        localStorage.setItem('shift_app_overrides', JSON.stringify(overrides));
-      }, [overrides]);
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          const currentUser = session?.user ?? null;
+          setUser(currentUser);
+          if (currentUser) {
+            fetchUserData(currentUser.id);
+          } else {
+            loadLocalData();
+          }
+        });
 
-      useEffect(() => {
-        localStorage.setItem('shift_app_events', JSON.stringify(events));
-      }, [events]);
+        return () => subscription.unsubscribe();
+      }, []);
 
+      const loadLocalData = () => {
+        const savedSettings = localStorage.getItem('shift_app_settings');
+        const savedOverrides = localStorage.getItem('shift_app_overrides');
+        const savedEvents = localStorage.getItem('shift_app_events');
+        const savedWorkouts = localStorage.getItem('shift_app_workouts');
+
+        if (savedSettings) setSettings(JSON.parse(savedSettings));
+        if (savedOverrides) setOverrides(JSON.parse(savedOverrides));
+        if (savedEvents) setEvents(JSON.parse(savedEvents));
+        if (savedWorkouts) setWorkouts(JSON.parse(savedWorkouts));
+        setDataLoaded(true);
+      };
+
+      const fetchUserData = async (userId) => {
+        try {
+          const { data, error } = await supabase
+            .from('user_schedules')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+          if (data) {
+            if (data.settings) setSettings(data.settings);
+            if (data.overrides) setOverrides(data.overrides);
+            if (data.events) setEvents(data.events);
+            if (data.workouts) setWorkouts(data.workouts);
+          } else {
+            // 데이터가 없으면 현재 로컬 데이터를 클라우드에 초기 저장
+            await saveUserData(userId, settings, overrides, events, workouts);
+          }
+        } catch (err) {
+          console.error('Error fetching user data:', err);
+        } finally {
+          setDataLoaded(true);
+        }
+      };
+
+      const saveUserData = async (userId, newSettings, newOverrides, newEvents, newWorkouts) => {
+        if (!userId) return;
+        try {
+          await supabase.from('user_schedules').upsert({
+            user_id: userId,
+            settings: newSettings,
+            overrides: newOverrides,
+            events: newEvents,
+            workouts: newWorkouts,
+            updated_at: new Date()
+          });
+        } catch (err) {
+          console.error('Error saving user data:', err);
+        }
+      };
+
+      // 상태 변경 시 자동 저장 (로그인 상태면 Supabase, 아니면 localStorage)
       useEffect(() => {
-        localStorage.setItem('shift_app_workouts', JSON.stringify(workouts));
-      }, [workouts]);
+        if (!dataLoaded) return;
+        if (user) {
+          saveUserData(user.id, settings, overrides, events, workouts);
+        } else {
+          localStorage.setItem('shift_app_settings', JSON.stringify(settings));
+          localStorage.setItem('shift_app_overrides', JSON.stringify(overrides));
+          localStorage.setItem('shift_app_events', JSON.stringify(events));
+          localStorage.setItem('shift_app_workouts', JSON.stringify(workouts));
+        }
+      }, [settings, overrides, events, workouts, user, dataLoaded]);
 
       const setWorkoutType = (dateStr, type) => {
         if (!dateStr) return;
@@ -528,7 +597,6 @@
                             )}
                           </div>
                           
-                          {/* 운동 배지 */}
                           {day.workoutInfo && day.isCurrentMonth && (
                             <span 
                               className="text-[11px] bg-[#142862] text-white border border-blue-300/40 rounded-md px-1 py-0.2 font-bold shadow-xs flex items-center justify-center shrink-0"
@@ -547,7 +615,6 @@
                         />
                       </div>
 
-                      {/* 등록된 일정 목록 */}
                       <div className="space-y-0.5 mt-auto max-h-[34px] overflow-hidden">
                         {day.dayEvents.slice(0, 1).map((evt) => (
                           <div
@@ -782,7 +849,6 @@
                   <i className="fa-solid fa-calendar-days text-lg"></i>
                 </div>
 
-                {/* 상단 연월 및 '오늘' 버튼 가로 배치 (좌우 월 넘김 버튼 삭제 완료) */}
                 <div className="flex items-center space-x-3">
                   <div
                     onTouchStart={handleHeaderTouchStart}
@@ -832,13 +898,25 @@
                   </button>
                 </div>
 
-                <button
-                  onClick={() => setIsSettingsOpen(true)}
-                  className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium rounded-xl transition shadow-sm active:scale-95"
-                >
-                  <i className="fa-solid fa-gear"></i>
-                  <span className="hidden sm:inline">패턴 설정</span>
-                </button>
+                <div className="flex items-center space-x-1.5">
+                  <button
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className={`flex items-center space-x-1 px-3 py-2 text-xs font-bold rounded-xl transition shadow-sm active:scale-95 ${
+                      user ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    <i className="fa-solid fa-user"></i>
+                    <span>{user ? '계정연동됨' : '로그인'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium rounded-xl transition shadow-sm active:scale-95"
+                  >
+                    <i className="fa-solid fa-gear"></i>
+                    <span className="hidden sm:inline">패턴 설정</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -895,7 +973,6 @@
             </div>
           </div>
 
-          {/* 하단 운동 기록 통계 카드 */}
           <div className="mt-2 bg-white rounded-2xl p-2.5 sm:p-3 shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 select-none">
             <div className="flex items-center space-x-2.5 w-full sm:w-auto">
               <div className="w-8 h-8 rounded-xl bg-[#1e3a8a] text-white flex items-center justify-center text-sm shadow-xs shrink-0">
@@ -928,7 +1005,7 @@
 
           <div className="mt-2 mb-1 text-center select-none">
             <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">
-              근무표 v1.6.1
+              근무표 v2.0.0 (Supabase Sync)
             </span>
           </div>
 
@@ -1021,6 +1098,119 @@
               onClose={() => setIsSettingsOpen(false)}
             />
           )}
+
+          {isAuthModalOpen && (
+            <AuthModal
+              user={user}
+              onClose={() => setIsAuthModalOpen(false)}
+            />
+          )}
+        </div>
+      );
+    }
+
+    function AuthModal({ user, onClose }) {
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [isSignUp, setIsSignUp] = useState(false);
+      const [loading, setLoading] = useState(false);
+      const [message, setMessage] = useState('');
+
+      const handleAuth = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setMessage('');
+
+        if (isSignUp) {
+          const { error } = await supabase.auth.signUp({ email, password });
+          if (error) setMessage(error.message);
+          else setMessage('회원가입 완료! 메일함을 확인하거나 바로 로그인하세요.');
+        } else {
+          const { error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) setMessage(error.message);
+          else {
+            setMessage('로그인 성공!');
+            setTimeout(() => onClose(), 1000);
+          }
+        }
+        setLoading(false);
+      };
+
+      const handleLogout = async () => {
+        await supabase.auth.signOut();
+        onClose();
+      };
+
+      return (
+        <div onClick={onClose} className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl shadow-xl max-w-sm w-full overflow-hidden border border-slate-100 p-5 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-base font-bold text-slate-850">
+                {user ? '계정 관리' : (isSignUp ? '회원가입' : '로그인')}
+              </h3>
+              <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600">
+                <i className="fa-solid fa-xmark text-lg"></i>
+              </button>
+            </div>
+
+            {user ? (
+              <div className="space-y-4 text-center py-2">
+                <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border">
+                  현재 로그인 계정:<br/><strong className="text-slate-900">{user.email}</strong>
+                </div>
+                <p className="text-[11px] text-emerald-600 font-semibold">✓ 클라우드 서버와 실시간 동기화 중입니다.</p>
+                <button
+                  onClick={handleLogout}
+                  className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition"
+                >
+                  로그아웃
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleAuth} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">이메일</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">비밀번호</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                    required
+                  />
+                </div>
+
+                {message && <p className="text-[11px] text-blue-600 font-semibold text-center">{message}</p>}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition"
+                >
+                  {loading ? '처리중...' : (isSignUp ? '가입하기' : '로그인하기')}
+                </button>
+
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsSignUp(!isSignUp)}
+                    className="text-[11px] text-blue-600 hover:underline font-semibold"
+                  >
+                    {isSignUp ? '이미 계정이 있으신가요? 로그인' : '계정이 없으신가요? 회원가입'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       );
     }
@@ -1478,7 +1668,6 @@
               </button>
             </div>
 
-            {/* 운동 선택 바 */}
             <div>
               <div className="text-[11px] font-bold text-slate-500 mb-1.5 flex items-center justify-between">
                 <span>오늘의 운동</span>
