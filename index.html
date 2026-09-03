@@ -35,14 +35,14 @@
 
     const SUPABASE_URL = 'https://vpwfnoqrmcerddtyatst.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_XcbXQ1PwLWWwKwL-lZ6hnw_WvR2j_zQ';
-    let supabase = null;
-    try {
-      if (window.supabase) {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // 안전한 Supabase 클라이언트 팩토리
+    const getSupabase = () => {
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
+        return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       }
-    } catch (e) {
-      console.error('Supabase initialization error:', e);
-    }
+      return null;
+    };
 
     const HOLIDAYS_DATA = {
       "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", "06-06": "현충일", "08-15": "광복절", "10-03": "개천절", "10-09": "한글날", "12-25": "성탄절",
@@ -158,39 +158,40 @@
       const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
       useEffect(() => {
-        if (!supabase) {
+        const client = getSupabase();
+        if (!client) {
           setDataLoaded(true);
           return;
         }
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        client.auth.getSession().then(({ data: { session } }) => {
           const currentUser = session?.user ?? null;
           setUser(currentUser);
-          if (currentUser) fetchUserData(currentUser.id);
+          if (currentUser) fetchUserData(currentUser.id, client);
           else setDataLoaded(true);
         }).catch(() => {
           setDataLoaded(true);
         });
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
           const currentUser = session?.user ?? null;
           setUser(currentUser);
-          if (currentUser) fetchUserData(currentUser.id);
+          if (currentUser) fetchUserData(currentUser.id, client);
           else setDataLoaded(true);
         });
 
         return () => subscription.unsubscribe();
       }, []);
 
-      const fetchUserData = async (userId) => {
+      const fetchUserData = async (userId, client) => {
         try {
-          const { data } = await supabase.from('user_schedules').select('*').eq('user_id', userId).single();
+          const { data } = await client.from('user_schedules').select('*').eq('user_id', userId).single();
           if (data) {
             if (data.settings) setSettings(data.settings);
             if (data.overrides) setOverrides(data.overrides);
             if (data.events) setEvents(data.events);
             if (data.workouts) setWorkouts(data.workouts);
           } else {
-            await saveUserData(userId, settings, overrides, events, workouts);
+            await saveUserData(userId, settings, overrides, events, workouts, client);
           }
         } catch (err) {
           console.error(err);
@@ -199,10 +200,11 @@
         }
       };
 
-      const saveUserData = async (userId, newSettings, newOverrides, newEvents, newWorkouts) => {
-        if (!userId || !supabase) return;
+      const saveUserData = async (userId, newSettings, newOverrides, newEvents, newWorkouts, explicitClient) => {
+        const client = explicitClient || getSupabase();
+        if (!userId || !client) return;
         try {
-          await supabase.from('user_schedules').upsert({
+          await client.from('user_schedules').upsert({
             user_id: userId, settings: newSettings, overrides: newOverrides, events: newEvents, workouts: newWorkouts, updated_at: new Date()
           });
         } catch (err) {
@@ -212,8 +214,9 @@
 
       useEffect(() => {
         if (!dataLoaded) return;
-        if (user && supabase) {
-          saveUserData(user.id, settings, overrides, events, workouts);
+        const client = getSupabase();
+        if (user && client) {
+          saveUserData(user.id, settings, overrides, events, workouts, client);
         }
         localStorage.setItem('shift_app_settings', JSON.stringify(settings));
         localStorage.setItem('shift_app_overrides', JSON.stringify(overrides));
@@ -644,7 +647,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.2.2 (Supabase PIN Sync)</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.2.3 (Supabase Safe Init)</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -683,7 +686,8 @@
 
       const handleAuth = async (e) => {
         e.preventDefault();
-        if (!supabase) {
+        const client = getSupabase();
+        if (!client) {
           setMessage('Supabase 연결을 확인해주세요.');
           return;
         }
@@ -706,7 +710,7 @@
         const securePassword = `${pinInput}__work_pin_salt`;
 
         if (isSignUp) {
-          const { error } = await supabase.auth.signUp({ email: pseudoEmail, password: securePassword });
+          const { error } = await client.auth.signUp({ email: pseudoEmail, password: securePassword });
           if (error) {
             if (error.message.includes('already registered')) {
               setMessage('이미 존재하는 아이디입니다. 로그인해 주세요.');
@@ -718,7 +722,7 @@
             setTimeout(() => onClose(), 1200);
           }
         } else {
-          const { error } = await supabase.auth.signInWithPassword({ email: pseudoEmail, password: securePassword });
+          const { error } = await client.auth.signInWithPassword({ email: pseudoEmail, password: securePassword });
           if (error) {
             setMessage('아이디 또는 PIN 번호가 올바르지 않습니다.');
           } else {
@@ -730,7 +734,8 @@
       };
 
       const handleLogout = async () => {
-        if (supabase) await supabase.auth.signOut();
+        const client = getSupabase();
+        if (client) await client.auth.signOut();
         onClose();
       };
 
