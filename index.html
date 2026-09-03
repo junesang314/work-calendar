@@ -424,7 +424,6 @@
                   } else if (isSunday || isHoliday) dateNumColor = "text-red-400 font-bold";
                   else if (isSaturday) dateNumColor = "text-blue-400 font-bold";
 
-                  // [수정사항 1 반영] 운동 모드일 때 운동한 날짜칸의 색상을 보색 계열(선명한 앰버/오렌지 톤 bg-amber-600/70 등)로 적용
                   let cellBgStyle = isWorkoutMode ? 'bg-slate-900/80' : 'bg-white';
                   if (!day.isCurrentMonth) cellBgStyle = isWorkoutMode ? "bg-slate-950/40" : "bg-slate-50/40";
                   else if (day.hasWorkout) cellBgStyle = isWorkoutMode ? "bg-amber-600/70 border-amber-500/60 shadow-md" : "bg-blue-800/60 border-blue-400/50 shadow-sm";
@@ -468,6 +467,7 @@
                         )}
                       </div>
                       <div className="space-y-0.5 mt-auto max-h-[34px] overflow-hidden">
+                        {/* [수정사항 6 반영] 운동 모드일 때는 개인 일정을 완전히 배제하여 깔끔하게 유지 */}
                         {isWorkoutMode ? (
                           null
                         ) : (
@@ -671,7 +671,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.6.0-step1</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.5.0</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
