@@ -420,7 +420,6 @@
                   } else if (isSunday || isHoliday) dateNumColor = "text-red-400 font-bold";
                   else if (isSaturday) dateNumColor = "text-blue-400 font-bold";
 
-                  // [가시성 개선] 운동한 칸의 배경색을 좀 더 선명하고 뚜렷한 네이비/블루 톤 (bg-blue-800/60)으로 변경하여 가시성 확보
                   let cellBgStyle = isWorkoutMode ? 'bg-slate-900/80' : 'bg-white';
                   if (!day.isCurrentMonth) cellBgStyle = isWorkoutMode ? "bg-slate-950/40" : "bg-slate-50/40";
                   else if (day.hasWorkout) cellBgStyle = isWorkoutMode ? "bg-blue-800/60 border-blue-500/50 shadow-sm" : "bg-blue-800/60 border-blue-400/50 shadow-sm";
@@ -446,7 +445,7 @@
                           {day.hasWorkout && day.isCurrentMonth && (
                             <div className="flex items-center space-x-0.5 shrink-0">
                               {day.workoutParsed.types.map(t => (
-                                <span key={t} className={`text-[10px] rounded-md px-1 py-0.2 font-bold shadow-xs border ${isWorkoutMode ? 'bg-blue-700 text-white border-blue-400/60' : 'bg-blue-700 text-white border-blue-400/60'}`} title={t === 'running' ? '달리기' : '크로스핏'}>
+                                <span key={t} className="text-[10px] rounded-md px-1 py-0.2 font-bold shadow-xs border bg-blue-700 text-white border-blue-400/60" title={t === 'running' ? '달리기' : '크로스핏'}>
                                   {t === 'running' ? '🏃' : '🏋️'}
                                 </span>
                               ))}
@@ -455,7 +454,14 @@
                         </div>
                       </div>
                       <div className="my-0.5 flex flex-col items-center justify-center">
-                        <ShiftBadge info={day.shiftInfo} isDarkBg={day.hasWorkout && day.isCurrentMonth} />
+                        {/* [Step 3 반영] 운동 모드일 때는 동그란 배지 대신 깔끔한 근무 스케줄 글씨(당/주/비)만 표시 */}
+                        {isWorkoutMode ? (
+                          <div className="text-xs font-bold text-slate-200">
+                            {day.isCurrentMonth && day.shiftInfo.shift}
+                          </div>
+                        ) : (
+                          <ShiftBadge info={day.shiftInfo} isDarkBg={day.hasWorkout && day.isCurrentMonth} />
+                        )}
                       </div>
                       <div className="space-y-0.5 mt-auto max-h-[34px] overflow-hidden">
                         {isWorkoutMode ? (
@@ -661,7 +667,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.8-step2</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.8-step3</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
