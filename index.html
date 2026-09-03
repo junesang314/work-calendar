@@ -4,39 +4,78 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>스케줄 근무 및 일정 관리</title>
+
+  <!-- 앱 아이콘 및 파비콘 설정 -->
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="shortcut icon" href="icon.png">
   <meta name="apple-mobile-web-app-title" content="근무표">
+
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- html2canvas for instant image export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-    body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; touch-action: manipulation; }
-    .custom-scrollbar::-webkit-scrollbar { width: 3px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      touch-action: manipulation;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen pb-16 sm:pb-6 select-none overflow-x-hidden">
   <div id="root"></div>
+
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
+
+    // --- Supabase 설정 ---
     const SUPABASE_URL = 'https://vpwfnoqrmcerddtyatst.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_XcbXQ1PwLWWwKwL-lZ6hnw_WvR2j_zQ';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // --- 한국 공휴일 데이터 ---
     const HOLIDAYS_DATA = {
-      "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", "06-06": "현충일", "08-15": "광복절", "10-03": "개천절", "10-09": "한글날", "12-25": "성탄절",
-      "2024-02-09": "설날 연휴", "2024-02-10": "설날", "2024-02-11": "설날 연휴", "2024-02-12": "대체공휴일", "2024-05-15": "부처님오신날", "2024-09-16": "추석 연휴", "2024-09-17": "추석", "2024-09-18": "추석 연휴",
-      "2025-01-28": "설날 연휴", "2025-01-29": "설날", "2025-01-30": "설날 연휴", "2025-05-05": "부처님오신날", "2025-05-06": "대체공휴일", "2025-10-05": "추석 연휴", "2025-10-06": "추석", "2025-10-07": "추석 연휴", "2025-10-08": "대체공휴일",
-      "2026-02-16": "설날 연휴", "2026-02-17": "설날", "2026-02-18": "설날 연휴", "2026-05-24": "부처님오신날", "2026-05-25": "대체공휴일", "2026-09-24": "추석 연휴", "2026-09-25": "추석", "2026-09-26": "추석 연휴",
-      "2027-02-06": "설날 연휴", "2027-02-07": "설날", "2027-02-08": "설날 연휴", "2027-02-09": "대체공휴일", "2027-05-13": "부처님오신날", "2027-09-14": "추석 연휴", "2027-09-15": "추석", "2027-09-16": "추석 연휴"
+      "01-01": "신정",
+      "03-01": "삼일절",
+      "05-05": "어린이날",
+      "06-06": "현충일",
+      "08-15": "광복절",
+      "10-03": "개천절",
+      "10-09": "한글날",
+      "12-25": "성탄절",
+      "2024-02-09": "설날 연휴", "2024-02-10": "설날", "2024-02-11": "설날 연휴", "2024-02-12": "대체공휴일",
+      "2024-05-15": "부처님오신날",
+      "2024-09-16": "추석 연휴", "2024-09-17": "추석", "2024-09-18": "추석 연휴",
+      "2025-01-28": "설날 연휴", "2025-01-29": "설날", "2025-01-30": "설날 연휴",
+      "2025-05-05": "부처님오신날", "2025-05-06": "대체공휴일",
+      "2025-10-05": "추석 연휴", "2025-10-06": "추석", "2025-10-07": "추석 연휴", "2025-10-08": "대체공휴일",
+      "2026-02-16": "설날 연휴", "2026-02-17": "설날", "2026-02-18": "설날 연휴",
+      "2026-05-24": "부처님오신날", "2026-05-25": "대체공휴일",
+      "2026-09-24": "추석 연휴", "2026-09-25": "추석", "2026-09-26": "추석 연휴",
+      "2027-02-06": "설날 연휴", "2027-02-07": "설날", "2027-02-08": "설날 연휴", "2027-02-09": "대체공휴일",
+      "2027-05-13": "부처님오신날",
+      "2027-09-14": "추석 연휴", "2027-09-15": "추석", "2027-09-16": "추석 연휴"
     };
 
     function getHolidayName(dateStr) {
@@ -53,24 +92,41 @@
       if (!dateStr) return { shift: '당직', isRuleModified: false, originalShift: '당직' };
       const anchor = new Date(settings.anchorDate + 'T00:00:00');
       const target = new Date(dateStr + 'T00:00:00');
+
       const diffDays = Math.round((target - anchor) / (1000 * 60 * 60 * 24));
       const anchorIdx = SHIFT_TYPES.indexOf(settings.anchorShift);
+      
       let rawIdx = (anchorIdx + diffDays) % 3;
       if (rawIdx < 0) rawIdx = (rawIdx + 3) % 3;
+
       const rawShift = SHIFT_TYPES[rawIdx];
+
       const dayOfWeek = target.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const holidayName = getHolidayName(dateStr);
       const isHoliday = !!holidayName;
+
       if (rawShift === '주간' && (isWeekend || isHoliday)) {
-        return { shift: '비번', isRuleModified: true, originalShift: '주간', reason: isWeekend ? '주말 휴일' : holidayName };
+        return {
+          shift: '비번',
+          isRuleModified: true,
+          originalShift: '주간',
+          reason: isWeekend ? '주말 휴일' : holidayName
+        };
       }
-      return { shift: rawShift, isRuleModified: false, originalShift: rawShift };
+
+      return {
+        shift: rawShift,
+        isRuleModified: false,
+        originalShift: rawShift
+      };
     }
 
     function getWorkoutInfo(val) {
       if (!val) return null;
-      if (val === 'crossfit' || val === '크로스핏') return { type: 'crossfit', label: '크로스핏', icon: '🏋️' };
+      if (val === 'crossfit' || val === '크로스핏') {
+        return { type: 'crossfit', label: '크로스핏', icon: '🏋️' };
+      }
       return { type: 'running', label: '달리기', icon: '🏃' };
     }
 
@@ -78,17 +134,22 @@
       const today = new Date();
       const [viewMode, setViewMode] = useState('monthly');
       const [currentDate, setCurrentDate] = useState(new Date());
+
       const [user, setUser] = useState(null);
       const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
       const [dragX, setDragX] = useState(0);
       const [isDragging, setIsDragging] = useState(false);
       const [isAnimating, setIsAnimating] = useState(false);
       const pendingDirectionRef = useRef(0);
+
       const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
       const containerRef = useRef(null);
+
       const [previewDayInfo, setPreviewDayInfo] = useState(null);
       const longPressTimerRef = useRef(null);
       const isLongPressedRef = useRef(false);
+
       const [isShareModalOpen, setIsShareModalOpen] = useState(false);
       const headerLongPressTimerRef = useRef(null);
       const isHeaderLongPressedRef = useRef(false);
@@ -122,22 +183,26 @@
       const [events, setEvents] = useState({});
       const [workouts, setWorkouts] = useState({});
       const [dataLoaded, setDataLoaded] = useState(false);
-      const [selectedDateStr, setSelectedDateStr] = useState(null);
-      const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
       useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
           const currentUser = session?.user ?? null;
           setUser(currentUser);
-          if (currentUser) fetchUserData(currentUser.id);
-          else loadLocalData();
+          if (currentUser) {
+            fetchUserData(currentUser.id);
+          } else {
+            loadLocalData();
+          }
         });
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
           const currentUser = session?.user ?? null;
           setUser(currentUser);
-          if (currentUser) fetchUserData(currentUser.id);
-          else loadLocalData();
+          if (currentUser) {
+            fetchUserData(currentUser.id);
+          } else {
+            loadLocalData();
+          }
         });
 
         return () => subscription.unsubscribe();
@@ -148,6 +213,7 @@
         const savedOverrides = localStorage.getItem('shift_app_overrides');
         const savedEvents = localStorage.getItem('shift_app_events');
         const savedWorkouts = localStorage.getItem('shift_app_workouts');
+
         if (savedSettings) setSettings(JSON.parse(savedSettings));
         if (savedOverrides) setOverrides(JSON.parse(savedOverrides));
         if (savedEvents) setEvents(JSON.parse(savedEvents));
@@ -157,7 +223,12 @@
 
       const fetchUserData = async (userId) => {
         try {
-          const { data } = await supabase.from('user_schedules').select('*').eq('user_id', userId).single();
+          const { data, error } = await supabase
+            .from('user_schedules')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
           if (data) {
             if (data.settings) setSettings(data.settings);
             if (data.overrides) setOverrides(data.overrides);
@@ -167,7 +238,7 @@
             await saveUserData(userId, settings, overrides, events, workouts);
           }
         } catch (err) {
-          console.error(err);
+          console.error('Error fetching user data:', err);
         } finally {
           setDataLoaded(true);
         }
@@ -177,10 +248,15 @@
         if (!userId) return;
         try {
           await supabase.from('user_schedules').upsert({
-            user_id: userId, settings: newSettings, overrides: newOverrides, events: newEvents, workouts: newWorkouts, updated_at: new Date()
+            user_id: userId,
+            settings: newSettings,
+            overrides: newOverrides,
+            events: newEvents,
+            workouts: newWorkouts,
+            updated_at: new Date()
           });
         } catch (err) {
-          console.error(err);
+          console.error('Error saving user data:', err);
         }
       };
 
@@ -200,17 +276,24 @@
         if (!dateStr) return;
         setWorkouts(prev => {
           const next = { ...prev };
-          if (!type || next[dateStr] === type) delete next[dateStr];
-          else next[dateStr] = type;
+          if (!type || next[dateStr] === type) {
+            delete next[dateStr];
+          } else {
+            next[dateStr] = type;
+          }
           return next;
         });
       };
 
       const getRelativeDate = (baseDate, offset) => {
         const d = new Date(baseDate);
-        if (viewMode === 'yearly') d.setFullYear(d.getFullYear() + offset);
-        else if (viewMode === 'monthly') d.setMonth(d.getMonth() + offset);
-        else if (viewMode === 'weekly') d.setDate(d.getDate() + (offset * 7));
+        if (viewMode === 'yearly') {
+          d.setFullYear(d.getFullYear() + offset);
+        } else if (viewMode === 'monthly') {
+          d.setMonth(d.getMonth() + offset);
+        } else if (viewMode === 'weekly') {
+          d.setDate(d.getDate() + (offset * 7));
+        }
         return d;
       };
 
@@ -218,65 +301,116 @@
       const currDate = currentDate;
       const nextDate = useMemo(() => getRelativeDate(currentDate, 1), [currentDate, viewMode]);
 
-      const goToday = () => { setCurrentDate(new Date()); setDragX(0); };
+      const triggerPageChange = (dir) => {
+        if (isAnimating) return;
+        const containerWidth = containerRef.current ? containerRef.current.clientWidth : window.innerWidth;
+        pendingDirectionRef.current = dir;
+        setIsAnimating(true);
+        setDragX(dir === -1 ? -containerWidth : containerWidth);
+      };
+
+      const goToday = () => {
+        setCurrentDate(new Date());
+        setDragX(0);
+      };
 
       const handleTouchStart = (e) => {
         if (isAnimating) return;
-        touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
+        touchStartRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+          time: Date.now()
+        };
         setIsDragging(true);
         setIsAnimating(false);
       };
 
       const handleTouchMove = (e) => {
         if (!isDragging) return;
+
         const currentX = e.touches[0].clientX;
         const currentY = e.touches[0].clientY;
+
         const deltaX = currentX - touchStartRef.current.x;
         const deltaY = currentY - touchStartRef.current.y;
+
         if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) {
-          if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+          if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+          }
         }
-        if (Math.abs(deltaX) > Math.abs(deltaY)) setDragX(deltaX);
+
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+          setDragX(deltaX);
+        }
       };
 
       const handleTouchEnd = () => {
-        if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+
         if (!isDragging) return;
         setIsDragging(false);
+
         const duration = Date.now() - touchStartRef.current.time;
         const velocity = Math.abs(dragX) / duration;
         const containerWidth = containerRef.current ? containerRef.current.clientWidth : window.innerWidth;
+
         if (dragX < -60 || (dragX < -25 && velocity > 0.25)) {
-          pendingDirectionRef.current = -1; setIsAnimating(true); setDragX(-containerWidth);
+          pendingDirectionRef.current = -1;
+          setIsAnimating(true);
+          setDragX(-containerWidth);
         } else if (dragX > 60 || (dragX > 25 && velocity > 0.25)) {
-          pendingDirectionRef.current = 1; setIsAnimating(true); setDragX(containerWidth);
+          pendingDirectionRef.current = 1;
+          setIsAnimating(true);
+          setDragX(containerWidth);
         } else {
-          pendingDirectionRef.current = 0; setIsAnimating(true); setDragX(0);
+          pendingDirectionRef.current = 0;
+          setIsAnimating(true);
+          setDragX(0);
         }
       };
 
       const handleTransitionEnd = () => {
         if (!isAnimating) return;
+
         const dir = pendingDirectionRef.current;
-        if (dir !== 0) setCurrentDate(prev => getRelativeDate(prev, dir === -1 ? 1 : -1));
-        setIsAnimating(false); setDragX(0); pendingDirectionRef.current = 0;
+        if (dir !== 0) {
+          setCurrentDate(prev => getRelativeDate(prev, dir === -1 ? 1 : -1));
+        }
+
+        setIsAnimating(false);
+        setDragX(0);
+        pendingDirectionRef.current = 0;
       };
 
       const handleCellTouchStart = (day) => {
         isLongPressedRef.current = false;
         longPressTimerRef.current = setTimeout(() => {
-          isLongPressedRef.current = true; setPreviewDayInfo(day);
+          isLongPressedRef.current = true;
+          setPreviewDayInfo(day);
           if (navigator.vibrate) navigator.vibrate(40);
         }, 450);
       };
 
       const handleCellTouchEnd = () => {
-        if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
       };
 
       const handleCellClick = (day) => {
-        if (isLongPressedRef.current) { isLongPressedRef.current = false; return; }
-        if (day && day.dateStr) setSelectedDateStr(day.dateStr);
+        if (isLongPressedRef.current) {
+          isLongPressedRef.current = false;
+          return;
+        }
+        if (day && day.dateStr) {
+          setSelectedDateStr(day.dateStr);
+        }
       };
 
       const getDayInfo = (d) => {
@@ -284,13 +418,16 @@
         const monthStr = String(d.getMonth() + 1).padStart(2, '0');
         const dayStr = String(d.getDate()).padStart(2, '0');
         const dateStr = `${yearStr}-${monthStr}-${dayStr}`;
+
         const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         const isToday = dateStr === todayStr;
         const dayOfWeek = d.getDay();
         const holidayName = getHolidayName(dateStr);
+        
         const rawWorkout = workouts[dateStr];
         const workoutInfo = getWorkoutInfo(rawWorkout);
         const isWorkout = !!workoutInfo;
+
         let shiftInfo;
         if (overrides[dateStr]) {
           shiftInfo = { shift: overrides[dateStr], isOverride: true, isRuleModified: false };
@@ -298,7 +435,19 @@
           const auto = calculateAutoShift(dateStr, settings);
           shiftInfo = { shift: auto.shift, isOverride: false, isRuleModified: auto.isRuleModified, reason: auto.reason };
         }
-        return { dateObj: new Date(d), dateStr, dayNum: d.getDate(), dayOfWeek, isToday, holidayName, shiftInfo, workoutInfo, isWorkout, dayEvents: events[dateStr] || [] };
+
+        return {
+          dateObj: new Date(d),
+          dateStr,
+          dayNum: d.getDate(),
+          dayOfWeek,
+          isToday,
+          holidayName,
+          shiftInfo,
+          workoutInfo,
+          isWorkout,
+          dayEvents: events[dateStr] || []
+        };
       };
 
       const getMonthlyDays = (targetDate) => {
@@ -306,31 +455,39 @@
         const m = targetDate.getMonth();
         const firstDay = new Date(y, m, 1);
         const lastDay = new Date(y, m + 1, 0);
+
         const startDate = new Date(firstDay);
         startDate.setDate(startDate.getDate() - startDate.getDay());
+
         const totalCellsNeeded = (lastDay.getDate() + firstDay.getDay() > 35) ? 42 : 35;
+
         const days = [];
         let curr = new Date(startDate);
+
         for (let i = 0; i < totalCellsNeeded; i++) {
           const info = getDayInfo(curr);
           info.isCurrentMonth = curr.getMonth() === m;
           days.push(info);
           curr.setDate(curr.getDate() + 1);
         }
+
         return days;
       };
 
       const getWeeklyDays = (targetDate) => {
         const startOfWeek = new Date(targetDate);
         startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+
         const days = [];
         let curr = new Date(startOfWeek);
+
         for (let i = 0; i < 7; i++) {
           const info = getDayInfo(curr);
           info.isCurrentMonth = true;
           days.push(info);
           curr.setDate(curr.getDate() + 1);
         }
+
         return days;
       };
 
@@ -360,7 +517,10 @@
         return `${start.replace(/-/g, '.')} ~ ${end.substring(5).replace(/-/g, '.')}`;
       }, [currDate, settings, overrides, events, workouts]);
 
-      const toggleYearlyView = () => { setViewMode(prev => (prev === 'yearly' ? 'monthly' : 'yearly')); setDragX(0); };
+      const toggleYearlyView = () => {
+        setViewMode(prev => (prev === 'yearly' ? 'monthly' : 'yearly'));
+        setDragX(0);
+      };
 
       const renderViewContent = (targetDate) => {
         if (viewMode === 'monthly') {
@@ -368,25 +528,44 @@
           return (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="grid grid-cols-7 border-b border-slate-200 text-center bg-slate-50/70 font-semibold text-xs py-2.5 text-slate-600">
-                <div className="text-red-500">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="text-blue-500">토</div>
+                <div className="text-red-500">일</div>
+                <div>월</div>
+                <div>화</div>
+                <div>수</div>
+                <div>목</div>
+                <div>금</div>
+                <div className="text-blue-500">토</div>
               </div>
+
               <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100">
                 {days.map((day, idx) => {
                   const isSunday = day.dayOfWeek === 0;
                   const isSaturday = day.dayOfWeek === 6;
                   const isHoliday = !!day.holidayName;
+
                   let dateNumColor = "text-slate-800";
-                  if (!day.isCurrentMonth) dateNumColor = "text-slate-300";
-                  else if (day.isWorkout) {
-                    if (isSunday || isHoliday) dateNumColor = "text-rose-200 font-black";
-                    else if (isSaturday) dateNumColor = "text-sky-200 font-black";
-                    else dateNumColor = "text-white font-black";
-                  } else if (isSunday || isHoliday) dateNumColor = "text-red-500 font-bold";
-                  else if (isSaturday) dateNumColor = "text-blue-500 font-bold";
+                  if (!day.isCurrentMonth) {
+                    dateNumColor = "text-slate-300";
+                  } else if (day.isWorkout) {
+                    if (isSunday || isHoliday) {
+                      dateNumColor = "text-rose-200 font-black";
+                    } else if (isSaturday) {
+                      dateNumColor = "text-sky-200 font-black";
+                    } else {
+                      dateNumColor = "text-white font-black";
+                    }
+                  } else if (isSunday || isHoliday) {
+                    dateNumColor = "text-red-500 font-bold";
+                  } else if (isSaturday) {
+                    dateNumColor = "text-blue-500 font-bold";
+                  }
 
                   let cellBgStyle = "bg-white";
-                  if (!day.isCurrentMonth) cellBgStyle = "bg-slate-50/40";
-                  else if (day.isWorkout) cellBgStyle = "bg-[#1e3a8a] border-[#254ea3] shadow-xs";
+                  if (!day.isCurrentMonth) {
+                    cellBgStyle = "bg-slate-50/40";
+                  } else if (day.isWorkout) {
+                    cellBgStyle = "bg-[#1e3a8a] border-[#254ea3] shadow-xs";
+                  }
 
                   return (
                     <div
@@ -396,31 +575,57 @@
                       onMouseDown={() => handleCellTouchStart(day)}
                       onMouseUp={handleCellTouchEnd}
                       onClick={() => handleCellClick(day)}
-                      className={`min-h-[100px] sm:min-h-[115px] p-1.5 transition cursor-pointer flex flex-col justify-between group hover:brightness-95 active:scale-[0.99] ${cellBgStyle} ${day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""}`}
+                      className={`min-h-[100px] sm:min-h-[115px] p-1.5 transition cursor-pointer flex flex-col justify-between group hover:brightness-95 active:scale-[0.99] ${cellBgStyle} ${
+                        day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""
+                      }`}
                     >
                       <div>
                         <div className="flex items-center justify-between leading-none">
                           <div className="flex items-center space-x-1 truncate">
-                            <span className={`text-xs sm:text-sm ${dateNumColor}`}>{day.dayNum}</span>
+                            <span className={`text-xs sm:text-sm ${dateNumColor}`}>
+                              {day.dayNum}
+                            </span>
                             {day.holidayName && day.isCurrentMonth && (
-                              <span className={`text-[9.5px] font-semibold truncate ${day.isWorkout ? 'text-rose-200 font-bold' : 'text-red-500'}`}>{day.holidayName}</span>
+                              <span className={`text-[9.5px] font-semibold truncate ${
+                                day.isWorkout ? 'text-rose-200 font-bold' : 'text-red-500'
+                              }`}>
+                                {day.holidayName}
+                              </span>
                             )}
                           </div>
+                          
                           {day.workoutInfo && day.isCurrentMonth && (
-                            <span className="text-[11px] bg-[#142862] text-white border border-blue-300/40 rounded-md px-1 py-0.2 font-bold shadow-xs flex items-center justify-center shrink-0" title={day.workoutInfo.label}>
+                            <span 
+                              className="text-[11px] bg-[#142862] text-white border border-blue-300/40 rounded-md px-1 py-0.2 font-bold shadow-xs flex items-center justify-center shrink-0"
+                              title={day.workoutInfo.label}
+                            >
                               {day.workoutInfo.icon}
                             </span>
                           )}
                         </div>
                       </div>
+
                       <div className="my-0.5 flex flex-col items-center justify-center">
-                        <ShiftBadge info={day.shiftInfo} isDarkBg={day.isWorkout && day.isCurrentMonth} />
+                        <ShiftBadge 
+                          info={day.shiftInfo} 
+                          isDarkBg={day.isWorkout && day.isCurrentMonth} 
+                        />
                       </div>
+
                       <div className="space-y-0.5 mt-auto max-h-[34px] overflow-hidden">
                         {day.dayEvents.slice(0, 1).map((evt) => (
-                          <div key={evt.id} className={`text-[9px] px-1.5 py-0.5 rounded truncate font-semibold flex items-center justify-between shadow-2xs border ${day.isWorkout ? "bg-white/95 text-slate-900 border-blue-200" : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200/80"}`}>
+                          <div
+                            key={evt.id}
+                            className={`text-[9px] px-1.5 py-0.5 rounded truncate font-semibold flex items-center justify-between shadow-2xs border ${
+                              day.isWorkout 
+                                ? "bg-white/95 text-slate-900 border-blue-200" 
+                                : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200/80"
+                            }`}
+                          >
                             <span className="truncate">{evt.title}</span>
-                            {evt.time && <span className={`text-[8px] pl-1 shrink-0 font-bold ${day.isWorkout ? 'text-blue-800' : 'text-emerald-700'}`}>{evt.time}</span>}
+                            {evt.time && <span className={`text-[8px] pl-1 shrink-0 font-bold ${
+                              day.isWorkout ? 'text-blue-800' : 'text-emerald-700'
+                            }`}>{evt.time}</span>}
                           </div>
                         ))}
                         {day.dayEvents.length > 1 && (
@@ -447,47 +652,83 @@
                   const isSaturday = day.dayOfWeek === 6;
                   const isHoliday = !!day.holidayName;
                   const dayNames = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+
                   let headerBg = "bg-slate-50 text-slate-700";
                   let dateNumColor = "text-slate-800";
-                  if (day.isToday) { headerBg = "bg-blue-600 text-white"; dateNumColor = "text-white"; }
-                  else if (isSunday || isHoliday) dateNumColor = "text-red-500";
-                  else if (isSaturday) dateNumColor = "text-blue-500";
+
+                  if (day.isToday) {
+                    headerBg = "bg-blue-600 text-white";
+                    dateNumColor = "text-white";
+                  } else if (isSunday || isHoliday) {
+                    dateNumColor = "text-red-500";
+                  } else if (isSaturday) {
+                    dateNumColor = "text-blue-500";
+                  }
 
                   const shift = day.shiftInfo.shift;
                   let shiftBoxStyle = "bg-white border-slate-200";
                   let shiftLabelStyle = "text-slate-600 font-medium";
-                  if (shift === '주간') { shiftBoxStyle = "bg-amber-100/90 border-amber-300"; shiftLabelStyle = "text-amber-950 font-bold"; }
-                  else if (shift === '당직') { shiftBoxStyle = "bg-blue-100/90 border-blue-300"; shiftLabelStyle = "text-blue-950 font-bold"; }
-                  else if (shift === '비번') { shiftBoxStyle = "bg-rose-100/80 border-rose-200"; shiftLabelStyle = "text-rose-900 font-bold"; }
+
+                  if (shift === '주간') {
+                    shiftBoxStyle = "bg-amber-100/90 border-amber-300";
+                    shiftLabelStyle = "text-amber-950 font-bold";
+                  } else if (shift === '당직') {
+                    shiftBoxStyle = "bg-blue-100/90 border-blue-300";
+                    shiftLabelStyle = "text-blue-950 font-bold";
+                  } else if (shift === '비번') {
+                    shiftBoxStyle = "bg-rose-100/80 border-rose-200";
+                    shiftLabelStyle = "text-rose-900 font-bold";
+                  } else {
+                    shiftBoxStyle = "bg-emerald-100/90 border-emerald-300";
+                    shiftLabelStyle = "text-emerald-950 font-bold";
+                  }
 
                   return (
-                    <div key={idx} className={`bg-white rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden ${day.isWorkout ? "ring-2 ring-[#1e3a8a] border-[#1e3a8a] bg-blue-50/40" : ""} ${day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"}`}>
+                    <div
+                      key={idx}
+                      className={`bg-white rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden ${
+                        day.isWorkout ? "ring-2 ring-[#1e3a8a] border-[#1e3a8a] bg-blue-50/40" : ""
+                      } ${day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"}`}
+                    >
                       <div className={`p-2.5 border-b flex items-center justify-between ${headerBg}`}>
                         <div>
                           <div className="text-[11px] font-semibold opacity-90">{dayNames[day.dayOfWeek]}</div>
-                          <div className={`text-base font-bold leading-none ${dateNumColor}`}>{day.dateStr.substring(5).replace('-', '.')}</div>
+                          <div className={`text-base font-bold leading-none ${dateNumColor}`}>
+                            {day.dateStr.substring(5).replace('-', '.')}
+                          </div>
                         </div>
                         <div className="flex items-center space-x-1.5">
                           {day.workoutInfo && (
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#1e3a8a] text-white flex items-center space-x-1 shadow-xs">
-                              <span>{day.workoutInfo.icon}</span><span>{day.workoutInfo.label}</span>
+                              <span>{day.workoutInfo.icon}</span>
+                              <span>{day.workoutInfo.label}</span>
                             </span>
                           )}
                           {day.holidayName && (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${day.isToday ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'}`}>{day.holidayName}</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${day.isToday ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'}`}>
+                              {day.holidayName}
+                            </span>
                           )}
                         </div>
                       </div>
+
                       <div className="p-2.5 flex-1 flex flex-col justify-between space-y-2.5">
                         <div className={`flex items-center justify-between p-2 rounded-xl border transition ${shiftBoxStyle}`}>
                           <span className={`text-xs ${shiftLabelStyle}`}>오늘의 근무</span>
                           <ShiftBadge info={day.shiftInfo} />
                         </div>
+
                         <div className="space-y-1 flex-1 min-h-[70px]">
-                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">일정 ({day.dayEvents.length})</div>
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 flex items-center justify-between">
+                            <span>일정 ({day.dayEvents.length})</span>
+                          </div>
+
                           {day.dayEvents.length > 0 ? (
                             day.dayEvents.map((evt) => (
-                              <div key={evt.id} className="text-[11px] bg-emerald-50 hover:bg-emerald-100 text-emerald-900 p-1.5 rounded-lg border border-emerald-200/80 space-y-0.5 shadow-2xs">
+                              <div
+                                key={evt.id}
+                                className="text-[11px] bg-emerald-50 hover:bg-emerald-100 text-emerald-900 p-1.5 rounded-lg border border-emerald-200/80 space-y-0.5 shadow-2xs"
+                              >
                                 <div className="font-bold flex items-center justify-between">
                                   <span>{evt.title}</span>
                                   {evt.time && <span className="text-[9px] text-emerald-700 font-bold bg-white/80 px-1 py-0.2 rounded border border-emerald-200/60">{evt.time}</span>}
@@ -496,20 +737,44 @@
                               </div>
                             ))
                           ) : (
-                            <div className="text-[10px] text-slate-300 text-center py-4">일정 없음</div>
+                            <div className="text-[10px] text-slate-300 text-center py-4">
+                              일정 없음
+                            </div>
                           )}
                         </div>
+
                         <div className="space-y-1">
                           <div className="grid grid-cols-2 gap-1">
-                            <button onClick={() => setWorkoutType(day.dateStr, 'running')} className={`py-1 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1 border active:scale-95 ${day.workoutInfo?.type === 'running' ? "bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-xs" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"}`}>
-                              <span>🏃</span><span>달리기</span>
+                            <button
+                              onClick={() => setWorkoutType(day.dateStr, 'running')}
+                              className={`py-1 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1 border active:scale-95 ${
+                                day.workoutInfo?.type === 'running'
+                                  ? "bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-xs"
+                                  : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                              }`}
+                            >
+                              <span>🏃</span>
+                              <span>달리기</span>
                             </button>
-                            <button onClick={() => setWorkoutType(day.dateStr, 'crossfit')} className={`py-1 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1 border active:scale-95 ${day.workoutInfo?.type === 'crossfit' ? "bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-xs" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"}`}>
-                              <span>🏋️</span><span>크로스핏</span>
+                            <button
+                              onClick={() => setWorkoutType(day.dateStr, 'crossfit')}
+                              className={`py-1 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1 border active:scale-95 ${
+                                day.workoutInfo?.type === 'crossfit'
+                                  ? "bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-xs"
+                                  : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                              }`}
+                            >
+                              <span>🏋️</span>
+                              <span>크로스핏</span>
                             </button>
                           </div>
-                          <button onClick={() => setSelectedDateStr(day.dateStr)} className="w-full py-1 text-xs font-medium text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center justify-center space-x-1">
-                            <i className="fa-solid fa-pen text-[10px]"></i><span>일정/근무 수정</span>
+
+                          <button
+                            onClick={() => setSelectedDateStr(day.dateStr)}
+                            className="w-full py-1 text-xs font-medium text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center justify-center space-x-1"
+                          >
+                            <i className="fa-solid fa-pen text-[10px]"></i>
+                            <span>일정/근무 수정</span>
                           </button>
                         </div>
                       </div>
@@ -529,14 +794,34 @@
                 <h2 className="text-base sm:text-lg font-bold text-slate-800">{y}년 전체 달력 선택</h2>
                 <p className="text-xs text-slate-400">원하는 월을 터치하거나 손가락으로 이어서 연도를 이동하세요.</p>
               </div>
+
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
                 {Array.from({ length: 12 }, (_, i) => i).map((m) => {
                   const isCurrentSelected = currDate.getFullYear() === y && currDate.getMonth() === m;
                   const isThisMonth = today.getFullYear() === y && today.getMonth() === m;
+
                   return (
-                    <button key={m} onClick={() => { const newDate = new Date(targetDate); newDate.setMonth(m); setCurrentDate(newDate); setViewMode('monthly'); setDragX(0); }} className={`p-3 sm:p-4 rounded-2xl border transition flex flex-col items-center justify-center space-y-0.5 relative active:scale-95 ${isCurrentSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105' : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'}`}>
+                    <button
+                      key={m}
+                      onClick={() => {
+                        const newDate = new Date(targetDate);
+                        newDate.setMonth(m);
+                        setCurrentDate(newDate);
+                        setViewMode('monthly');
+                        setDragX(0);
+                      }}
+                      className={`p-3 sm:p-4 rounded-2xl border transition flex flex-col items-center justify-center space-y-0.5 relative active:scale-95 ${
+                        isCurrentSelected
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105'
+                          : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'
+                      }`}
+                    >
                       <span className="text-base sm:text-lg font-black">{m + 1}월</span>
-                      {isThisMonth && (<span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${isCurrentSelected ? 'bg-white text-blue-600' : 'bg-blue-100 text-blue-700'}`}>이번달</span>)}
+                      {isThisMonth && (
+                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${isCurrentSelected ? 'bg-white text-blue-600' : 'bg-blue-100 text-blue-700'}`}>
+                          이번달
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -550,60 +835,145 @@
         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-3 sm:py-5">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3.5 sm:p-5 mb-2.5">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              
               <div className="flex items-center space-x-3">
-                <div onClick={toggleYearlyView} className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl cursor-pointer transition active:scale-95" title="터치하여 12달 선택">
+                <div
+                  onClick={toggleYearlyView}
+                  className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl cursor-pointer transition active:scale-95"
+                  title="터치하여 12달 선택"
+                >
                   <i className="fa-solid fa-calendar-days text-lg"></i>
                 </div>
+
                 <div className="flex items-center space-x-3">
-                  <div onTouchStart={handleHeaderTouchStart} onTouchEnd={handleHeaderTouchEnd} onMouseDown={handleHeaderTouchStart} onMouseUp={handleHeaderTouchEnd} onClick={handleHeaderClick} className="cursor-pointer group flex items-center space-x-1.5 hover:opacity-80 transition select-none" title="터치: 12달 보기 / 길게 누르기: 캡처 및 이미지 저장">
+                  <div
+                    onTouchStart={handleHeaderTouchStart}
+                    onTouchEnd={handleHeaderTouchEnd}
+                    onMouseDown={handleHeaderTouchStart}
+                    onMouseUp={handleHeaderTouchEnd}
+                    onClick={handleHeaderClick}
+                    className="cursor-pointer group flex items-center space-x-1.5 hover:opacity-80 transition select-none"
+                    title="터치: 12달 보기 / 길게 누르기: 캡처 및 이미지 저장"
+                  >
                     <h1 className="text-lg sm:text-2xl font-bold text-slate-800 tracking-tight">
-                      {viewMode === 'yearly' ? `${currDate.getFullYear()}년` : viewMode === 'monthly' ? `${currDate.getFullYear()}년 ${currDate.getMonth() + 1}월` : weekRangeText}
+                      {viewMode === 'yearly'
+                        ? `${currDate.getFullYear()}년`
+                        : viewMode === 'monthly'
+                        ? `${currDate.getFullYear()}년 ${currDate.getMonth() + 1}월`
+                        : weekRangeText}
                     </h1>
                   </div>
-                  <button onClick={goToday} className="px-3 py-1 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition active:scale-95 shadow-2xs">오늘</button>
+
+                  <button onClick={goToday} className="px-3 py-1 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition active:scale-95 shadow-2xs">
+                    오늘
+                  </button>
                 </div>
               </div>
+
               <div className="flex items-center justify-between md:justify-end space-x-2 border-t md:border-t-0 pt-2.5 md:pt-0 border-slate-100">
                 <div className="bg-slate-100 p-1 rounded-xl flex items-center text-xs font-bold">
-                  <button onClick={() => { setViewMode('monthly'); setDragX(0); }} className={`px-3 py-1.5 rounded-lg transition ${viewMode === 'monthly' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+                  <button
+                    onClick={() => { setViewMode('monthly'); setDragX(0); }}
+                    className={`px-3 py-1.5 rounded-lg transition ${
+                      viewMode === 'monthly'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
                     <i className="fa-regular fa-calendar-days mr-1.5"></i>월간
                   </button>
-                  <button onClick={() => { setViewMode('weekly'); setDragX(0); }} className={`px-3 py-1.5 rounded-lg transition ${viewMode === 'weekly' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+                  <button
+                    onClick={() => { setViewMode('weekly'); setDragX(0); }}
+                    className={`px-3 py-1.5 rounded-lg transition ${
+                      viewMode === 'weekly'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
                     <i className="fa-solid fa-list-check mr-1.5"></i>위클리
                   </button>
                 </div>
+
                 <div className="flex items-center space-x-1.5">
-                  <button onClick={() => setIsAuthModalOpen(true)} className={`flex items-center space-x-1 px-3 py-2 text-xs font-bold rounded-xl transition shadow-sm active:scale-95 ${user ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
-                    <i className="fa-solid fa-user"></i><span>{user ? '계정연동됨' : '로그인'}</span>
+                  <button
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className={`flex items-center space-x-1 px-3 py-2 text-xs font-bold rounded-xl transition shadow-sm active:scale-95 ${
+                      user ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    <i className="fa-solid fa-user"></i>
+                    <span>{user ? '계정연동됨' : '로그인'}</span>
                   </button>
-                  <button onClick={() => setIsSettingsOpen(true)} className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium rounded-xl transition shadow-sm active:scale-95">
-                    <i className="fa-solid fa-gear"></i><span className="hidden sm:inline">패턴 설정</span>
+
+                  <button
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium rounded-xl transition shadow-sm active:scale-95"
+                  >
+                    <i className="fa-solid fa-gear"></i>
+                    <span className="hidden sm:inline">패턴 설정</span>
                   </button>
                 </div>
               </div>
             </div>
+
             {viewMode === 'monthly' && (
               <div className="mt-2 pt-2 border-t border-slate-100 flex items-center space-x-2 text-xs font-semibold overflow-x-auto">
                 <span className="text-slate-400 font-normal mr-1">이번달 근무:</span>
-                <div className="flex items-center space-x-1 bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-100"><span className="w-2 h-2 rounded-full bg-blue-600"></span><span>당직 {monthSummary.당직}</span></div>
-                <div className="flex items-center space-x-1 bg-amber-50 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-100"><span className="w-2 h-2 rounded-full bg-amber-400"></span><span>주간 {monthSummary.주간}</span></div>
-                <div className="flex items-center space-x-1 bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full border border-rose-100"><span className="w-2 h-2 rounded-full bg-rose-500"></span><span>비번 {monthSummary.비번}</span></div>
-                {monthSummary.연차 > 0 && (<div className="flex items-center space-x-1 bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full border border-slate-200"><span className="w-2 h-2 rounded-full bg-slate-500"></span><span>연차 {monthSummary.연차}</span></div>)}
+                <div className="flex items-center space-x-1 bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-100">
+                  <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                  <span>당직 {monthSummary.당직}</span>
+                </div>
+                <div className="flex items-center space-x-1 bg-amber-50 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-100">
+                  <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                  <span>주간 {monthSummary.주간}</span>
+                </div>
+                <div className="flex items-center space-x-1 bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full border border-rose-100">
+                  <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                  <span>비번 {monthSummary.비번}</span>
+                </div>
+                {monthSummary.연차 > 0 && (
+                  <div className="flex items-center space-x-1 bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full border border-slate-200">
+                    <span className="w-2 h-2 rounded-full bg-slate-500"></span>
+                    <span>연차 {monthSummary.연차}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          <div ref={containerRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} className="overflow-hidden w-full relative touch-pan-y">
-            <div onTransitionEnd={handleTransitionEnd} style={{ display: 'flex', width: '300%', transform: `translateX(calc(-33.333333% + ${dragX}px))`, transition: isAnimating ? 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)' : 'none' }}>
-              <div className="w-1/3 shrink-0 px-0.5">{renderViewContent(prevDate)}</div>
-              <div className="w-1/3 shrink-0 px-0.5">{renderViewContent(currDate)}</div>
-              <div className="w-1/3 shrink-0 px-0.5">{renderViewContent(nextDate)}</div>
+          <div
+            ref={containerRef}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            className="overflow-hidden w-full relative touch-pan-y"
+          >
+            <div
+              onTransitionEnd={handleTransitionEnd}
+              style={{
+                display: 'flex',
+                width: '300%',
+                transform: `translateX(calc(-33.333333% + ${dragX}px))`,
+                transition: isAnimating ? 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)' : 'none'
+              }}
+            >
+              <div className="w-1/3 shrink-0 px-0.5">
+                {renderViewContent(prevDate)}
+              </div>
+              <div className="w-1/3 shrink-0 px-0.5">
+                {renderViewContent(currDate)}
+              </div>
+              <div className="w-1/3 shrink-0 px-0.5">
+                {renderViewContent(nextDate)}
+              </div>
             </div>
           </div>
 
           <div className="mt-2 bg-white rounded-2xl p-2.5 sm:p-3 shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 select-none">
             <div className="flex items-center space-x-2.5 w-full sm:w-auto">
-              <div className="w-8 h-8 rounded-xl bg-[#1e3a8a] text-white flex items-center justify-center text-sm shadow-xs shrink-0">💪</div>
+              <div className="w-8 h-8 rounded-xl bg-[#1e3a8a] text-white flex items-center justify-center text-sm shadow-xs shrink-0">
+                💪
+              </div>
               <div>
                 <div className="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
                   <span>이번 달 운동 통계</span>
@@ -612,47 +982,132 @@
                 <div className="text-[10px] text-slate-400">달리기와 크로스핏 기록 요약</div>
               </div>
             </div>
+
             <div className="flex items-center space-x-1.5 w-full sm:w-auto whitespace-nowrap">
-              <div className="flex items-center space-x-1 bg-blue-50/80 text-blue-900 px-2 py-1.5 rounded-xl border border-blue-100 text-xs font-bold flex-1 sm:flex-none justify-center"><span>🏃 달리기</span><span className="text-blue-600 font-extrabold text-sm pl-0.5">{monthSummary.달리기}</span></div>
-              <div className="flex items-center space-x-1 bg-indigo-50/80 text-indigo-900 px-2 py-1.5 rounded-xl border border-indigo-100 text-xs font-bold flex-[1.4] sm:flex-none justify-center"><span>🏋️ 크로스핏</span><span className="text-indigo-600 font-extrabold text-sm pl-0.5">{monthSummary.크로스핏}</span></div>
-              <div className="flex items-center space-x-1 bg-[#1e3a8a] text-white px-2 py-1.5 rounded-xl text-xs font-bold shadow-xs flex-1 sm:flex-none justify-center"><span>총 운동</span><span className="text-blue-200 font-black text-sm pl-0.5">{monthSummary.총운동}</span></div>
+              <div className="flex items-center space-x-1 bg-blue-50/80 text-blue-900 px-2 py-1.5 rounded-xl border border-blue-100 text-xs font-bold flex-1 sm:flex-none justify-center">
+                <span>🏃 달리기</span>
+                <span className="text-blue-600 font-extrabold text-sm pl-0.5">{monthSummary.달리기}</span>
+              </div>
+              <div className="flex items-center space-x-1 bg-indigo-50/80 text-indigo-900 px-2 py-1.5 rounded-xl border border-indigo-100 text-xs font-bold flex-[1.4] sm:flex-none justify-center">
+                <span>🏋️ 크로스핏</span>
+                <span className="text-indigo-600 font-extrabold text-sm pl-0.5">{monthSummary.크로스핏}</span>
+              </div>
+              <div className="flex items-center space-x-1 bg-[#1e3a8a] text-white px-2 py-1.5 rounded-xl text-xs font-bold shadow-xs flex-1 sm:flex-none justify-center">
+                <span>총 운동</span>
+                <span className="text-blue-200 font-black text-sm pl-0.5">{monthSummary.총운동}</span>
+              </div>
             </div>
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.0.3 (Supabase Sync)</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">
+              근무표 v2.1.0 (Korean ID & PIN Sync)
+            </span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
-            <button onClick={() => { setViewMode('monthly'); setDragX(0); }} className={`flex flex-col items-center space-y-1 ${viewMode === 'monthly' ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>
-              <i className="fa-regular fa-calendar-days text-base"></i><span className="text-[10px]">월간 달력</span>
+            <button
+              onClick={() => { setViewMode('monthly'); setDragX(0); }}
+              className={`flex flex-col items-center space-y-1 ${viewMode === 'monthly' ? 'text-blue-600 font-bold' : 'text-slate-400'}`}
+            >
+              <i className="fa-regular fa-calendar-days text-base"></i>
+              <span className="text-[10px]">월간 달력</span>
             </button>
-            <button onClick={() => { setViewMode('weekly'); setDragX(0); }} className={`flex flex-col items-center space-y-1 ${viewMode === 'weekly' ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>
-              <i className="fa-solid fa-list-check text-base"></i><span className="text-[10px]">위클리 스케줄</span>
+            <button
+              onClick={() => { setViewMode('weekly'); setDragX(0); }}
+              className={`flex flex-col items-center space-y-1 ${viewMode === 'weekly' ? 'text-blue-600 font-bold' : 'text-slate-400'}`}
+            >
+              <i className="fa-solid fa-list-check text-base"></i>
+              <span className="text-[10px]">위클리 스케줄</span>
             </button>
-            <button onClick={() => setIsSettingsOpen(true)} className="flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-700">
-              <i className="fa-solid fa-gear text-base"></i><span className="text-[10px]">패턴 설정</span>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-700"
+            >
+              <i className="fa-solid fa-gear text-base"></i>
+              <span className="text-[10px]">패턴 설정</span>
             </button>
           </div>
 
           {previewDayInfo && (
-            <QuickPreviewPopup dayInfo={previewDayInfo} workoutInfo={previewDayInfo.workoutInfo} onSelectWorkout={(type) => setWorkoutType(previewDayInfo.dateStr, type)} onClose={() => setPreviewDayInfo(null)} onOpenDetail={() => { const target = previewDayInfo.dateStr; setPreviewDayInfo(null); setSelectedDateStr(target); }} />
+            <QuickPreviewPopup
+              dayInfo={previewDayInfo}
+              workoutInfo={previewDayInfo.workoutInfo}
+              onSelectWorkout={(type) => setWorkoutType(previewDayInfo.dateStr, type)}
+              onClose={() => setPreviewDayInfo(null)}
+              onOpenDetail={() => {
+                const target = previewDayInfo.dateStr;
+                setPreviewDayInfo(null);
+                setSelectedDateStr(target);
+              }}
+            />
           )}
 
           {selectedDateStr && (
-            <DateDetailModal dateStr={selectedDateStr} workoutInfo={getWorkoutInfo(workouts[selectedDateStr])} onSelectWorkout={(type) => setWorkoutType(selectedDateStr, type)} onClose={() => setSelectedDateStr(null)} settings={settings} overrideShift={overrides[selectedDateStr]} onSetOverride={(shift) => { if (shift === null) { const copy = { ...overrides }; delete copy[selectedDateStr]; setOverrides(copy); } else { setOverrides({ ...overrides, [selectedDateStr]: shift }); } }} events={events[selectedDateStr] || []} onAddEvent={(newEvent) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: [...list, newEvent] }); }} onDeleteEvent={(eventId) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: list.filter((e) => e.id !== eventId) }); }} />
+            <DateDetailModal
+              dateStr={selectedDateStr}
+              workoutInfo={getWorkoutInfo(workouts[selectedDateStr])}
+              onSelectWorkout={(type) => setWorkoutType(selectedDateStr, type)}
+              onClose={() => setSelectedDateStr(null)}
+              settings={settings}
+              overrideShift={overrides[selectedDateStr]}
+              onSetOverride={(shift) => {
+                if (shift === null) {
+                  const copy = { ...overrides };
+                  delete copy[selectedDateStr];
+                  setOverrides(copy);
+                } else {
+                  setOverrides({ ...overrides, [selectedDateStr]: shift });
+                }
+              }}
+              events={events[selectedDateStr] || []}
+              onAddEvent={(newEvent) => {
+                const list = events[selectedDateStr] || [];
+                setEvents({ ...events, [selectedDateStr]: [...list, newEvent] });
+              }}
+              onDeleteEvent={(eventId) => {
+                const list = events[selectedDateStr] || [];
+                setEvents({
+                  ...events,
+                  [selectedDateStr]: list.filter((e) => e.id !== eventId)
+                });
+              }}
+            />
           )}
 
-          {isShareModalOpen && (<ShareCaptureModal currDate={currDate} monthlyDays={currMonthlyDays} monthSummary={monthSummary} onClose={() => setIsShareModalOpen(false)} />)}
-          {isSettingsOpen && (<SettingsModal settings={settings} onSave={(newSettings) => { setSettings(newSettings); setIsSettingsOpen(false); }} onClose={() => setIsSettingsOpen(false)} />)}
-          {isAuthModalOpen && (<AuthModal user={user} onClose={() => setIsAuthModalOpen(false)} />)}
+          {isShareModalOpen && (
+            <ShareCaptureModal
+              currDate={currDate}
+              monthlyDays={currMonthlyDays}
+              monthSummary={monthSummary}
+              onClose={() => setIsShareModalOpen(false)}
+            />
+          )}
+
+          {isSettingsOpen && (
+            <SettingsModal
+              settings={settings}
+              onSave={(newSettings) => {
+                setSettings(newSettings);
+                setIsSettingsOpen(false);
+              }}
+              onClose={() => setIsSettingsOpen(false)}
+            />
+          )}
+
+          {isAuthModalOpen && (
+            <AuthModal
+              user={user}
+              onClose={() => setIsAuthModalOpen(false)}
+            />
+          )}
         </div>
       );
     }
 
     function AuthModal({ user, onClose }) {
-      const [email, setEmail] = useState('');
-      const [password, setPassword] = useState('');
+      const [userIdInput, setUserIdInput] = useState('');
+      const [pinInput, setPinInput] = useState('');
       const [isSignUp, setIsSignUp] = useState(false);
       const [loading, setLoading] = useState(false);
       const [message, setMessage] = useState('');
@@ -661,50 +1116,120 @@
         e.preventDefault();
         setLoading(true);
         setMessage('');
+
+        const cleanId = userIdInput.trim();
+        if (!cleanId) {
+          setMessage('아이디를 입력해주세요.');
+          setLoading(false);
+          return;
+        }
+        if (!pinInput || pinInput.length < 4) {
+          setMessage('4자리 이상 PIN 번호를 입력해주세요.');
+          setLoading(false);
+          return;
+        }
+
+        // Supabase는 이메일 형식이 필수이므로 한글 아이디를 가상 이메일로 변환
+        const pseudoEmail = `${cleanId}@work.calendar`;
+        const securePassword = `${pinInput}__work_pin_salt`;
+
         if (isSignUp) {
-          const { error } = await supabase.auth.signUp({ email, password });
-          if (error) setMessage(error.message);
-          else setMessage('회원가입 완료! 메일함을 확인하거나 바로 로그인하세요.');
+          const { error } = await supabase.auth.signUp({ email: pseudoEmail, password: securePassword });
+          if (error) {
+            if (error.message.includes('already registered')) {
+              setMessage('이미 존재하는 아이디입니다. 바로 로그인해 주세요.');
+            } else {
+              setMessage(error.message);
+            }
+          } else {
+            setMessage('계정 생성 완료! 바로 로그인되었습니다.');
+            setTimeout(() => onClose(), 1200);
+          }
         } else {
-          const { error } = await supabase.auth.signInWithPassword({ email, password });
-          if (error) setMessage(error.message);
-          else { setMessage('로그인 성공!'); setTimeout(() => onClose(), 1000); }
+          const { error } = await supabase.auth.signInWithPassword({ email: pseudoEmail, password: securePassword });
+          if (error) {
+            setMessage('아이디 또는 PIN 번호가 올바르지 않습니다.');
+          } else {
+            setMessage('로그인 성공!');
+            setTimeout(() => onClose(), 1000);
+          }
         }
         setLoading(false);
       };
 
-      const handleLogout = async () => { await supabase.auth.signOut(); onClose(); };
+      const handleLogout = async () => {
+        await supabase.auth.signOut();
+        onClose();
+      };
 
       return (
         <div onClick={onClose} className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl shadow-xl max-w-sm w-full overflow-hidden border border-slate-100 p-5 space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-base font-bold text-slate-900">{user ? '계정 관리' : (isSignUp ? '회원가입' : '로그인')}</h3>
-              <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark text-lg"></i></button>
+              <h3 className="text-base font-bold text-slate-900">
+                {user ? '계정 관리' : (isSignUp ? '계정 생성' : '간편 로그인')}
+              </h3>
+              <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600">
+                <i className="fa-solid fa-xmark text-lg"></i>
+              </button>
             </div>
+
             {user ? (
               <div className="space-y-4 text-center py-2">
-                <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border">현재 로그인 계정:<br/><strong className="text-slate-900">{user.email}</strong></div>
+                <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border">
+                  현재 연동된 아이디:<br/><strong className="text-slate-900 text-sm">{user.email?.split('@')[0]}</strong>
+                </div>
                 <p className="text-[11px] text-emerald-600 font-semibold">✓ 클라우드 서버와 실시간 동기화 중입니다.</p>
-                <button onClick={handleLogout} className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition">로그아웃</button>
+                <button
+                  onClick={handleLogout}
+                  className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition"
+                >
+                  로그아웃
+                </button>
               </div>
             ) : (
               <form onSubmit={handleAuth} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">이메일</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none" required />
+                  <label className="block text-xs font-bold text-slate-700 mb-1">아이디 (한글 가능)</label>
+                  <input
+                    type="text"
+                    placeholder="예: 준상"
+                    value={userIdInput}
+                    onChange={(e) => setUserIdInput(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">비밀번호</label>
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none" required />
+                  <label className="block text-xs font-bold text-slate-700 mb-1">PIN 번호 (숫자)</label>
+                  <input
+                    type="password"
+                    maxLength="8"
+                    placeholder="비밀번호 대신 사용할 4자리 이상 PIN"
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none tracking-widest"
+                    required
+                  />
                 </div>
+
                 {message && <p className="text-[11px] text-blue-600 font-semibold text-center">{message}</p>}
-                <button type="submit" disabled={loading} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition">
-                  {loading ? '처리중...' : (isSignUp ? '가입하기' : '로그인하기')}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition"
+                >
+                  {loading ? '처리중...' : (isSignUp ? '계정 만들기' : '로그인')}
                 </button>
+
                 <div className="text-center pt-2">
-                  <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="text-[11px] text-blue-600 hover:underline font-semibold">
-                    {isSignUp ? '이미 계정이 있으신가요? 로그인' : '계정이 없으신가요? 회원가입'}
+                  <button
+                    type="button"
+                    onClick={() => setIsSignUp(!isSignUp)}
+                    className="text-[11px] text-blue-600 hover:underline font-semibold"
+                  >
+                    {isSignUp ? '이미 계정이 있으신가요? 로그인' : '처음이신가요? 간편 계정 만들기'}
                   </button>
                 </div>
               </form>
@@ -716,31 +1241,57 @@
 
     function ShiftBadge({ info, isDarkBg }) {
       const { shift, isOverride } = info;
+
       if (shift === '당직') {
         return (
           <div className="relative group">
-            <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs ${isDarkBg ? 'bg-blue-500 text-white ring-1 ring-white/40' : 'bg-blue-600 text-white'}`}>당</span>
-            {isOverride && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 border border-white rounded-full" title="수동 수정됨"></span>}
+            <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs ${
+              isDarkBg ? 'bg-blue-500 text-white ring-1 ring-white/40' : 'bg-blue-600 text-white'
+            }`}>
+              당
+            </span>
+            {isOverride && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 border border-white rounded-full" title="수동 수정됨"></span>
+            )}
           </div>
         );
       }
+
       if (shift === '주간') {
         return (
           <div className="relative group">
-            <span className="w-6 h-6 sm:w-7 sm:h-7 bg-amber-400 text-slate-900 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs">주</span>
-            {isOverride && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-600 border border-white rounded-full" title="수동 수정됨"></span>}
+            <span className="w-6 h-6 sm:w-7 sm:h-7 bg-amber-400 text-slate-900 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs">
+              주
+            </span>
+            {isOverride && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-600 border border-white rounded-full" title="수동 수정됨"></span>
+            )}
           </div>
         );
       }
+
       if (shift === '비번') {
         return (
           <div className="relative group">
-            <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs border ${isDarkBg ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>비</span>
-            {isOverride && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 border border-white rounded-full" title="수동 수정됨"></span>}
+            <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs border ${
+              isDarkBg 
+                ? 'bg-rose-100 text-rose-800 border-rose-200' 
+                : 'bg-rose-50 text-rose-600 border-rose-200'
+            }`}>
+              비
+            </span>
+            {isOverride && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 border border-white rounded-full" title="수동 수정됨"></span>
+            )}
           </div>
         );
       }
-      return <span className="w-6 h-6 sm:w-7 sm:h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs">{shift.substring(0, 1)}</span>;
+
+      return (
+        <span className="w-6 h-6 sm:w-7 sm:h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs">
+          {shift.substring(0, 1)}
+        </span>
+      );
     }
 
     function ShareCaptureModal({ currDate, monthlyDays, monthSummary, onClose }) {
@@ -748,36 +1299,65 @@
       const [copySuccess, setCopySuccess] = useState(false);
       const [isGenerating, setIsGenerating] = useState(false);
       const cardRef = useRef(null);
+
       const year = currDate.getFullYear();
       const month = currDate.getMonth() + 1;
 
       const handleSaveCroppedImage = async () => {
         if (!cardRef.current || isGenerating) return;
         setIsGenerating(true);
+
         try {
-          if (document.fonts && document.fonts.ready) await document.fonts.ready;
-          const canvas = await html2canvas(cardRef.current, { scale: 2.5, useCORS: true, backgroundColor: '#ffffff', logging: false });
+          if (document.fonts && document.fonts.ready) {
+            await document.fonts.ready;
+          }
+
+          const canvas = await html2canvas(cardRef.current, {
+            scale: 2.5,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false
+          });
+
           canvas.toBlob(async (blob) => {
-            if (!blob) { setIsGenerating(false); return; }
+            if (!blob) {
+              setIsGenerating(false);
+              return;
+            }
+
             const fileName = `${year}년_${month}월_근무표.png`;
             const file = new File([blob], fileName, { type: 'image/png' });
+
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              try { await navigator.share({ files: [file], title: `${year}년 ${month}월 근무표` }); } catch (err) {}
+              try {
+                await navigator.share({
+                  files: [file],
+                  title: `${year}년 ${month}월 근무표`
+                });
+              } catch (err) {}
             } else {
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
-              a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+              a.href = url;
+              a.download = fileName;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
             }
             setIsGenerating(false);
           }, 'image/png');
         } catch (error) {
-          console.error(error); setIsGenerating(false);
+          console.error('Image capture failed:', error);
+          alert('이미지 생성에 실패했습니다. 다시 시도해주세요.');
+          setIsGenerating(false);
         }
       };
 
       const generateTextSummary = () => {
         let text = `📅 ${year}년 ${month}월 근무 및 일정 스케줄\n`;
         text += `당직 ${monthSummary.당직}회 / 주간 ${monthSummary.주간}회 / 비번 ${monthSummary.비번}회 (운동 ${monthSummary.총운동}회)\n\n`;
+
         const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
         monthlyDays.forEach(day => {
           if (day.isCurrentMonth) {
@@ -785,56 +1365,112 @@
             const dayName = dayNames[day.dayOfWeek];
             const shift = day.shiftInfo.shift;
             const workout = day.workoutInfo ? ` [${day.workoutInfo.label} 완료]` : '';
-            const eventsText = day.dayEvents.length > 0 ? ` - ${day.dayEvents.map(e => e.time ? `${e.title}(${e.time})` : e.title).join(', ')}` : '';
+            const eventsText = day.dayEvents.length > 0 
+              ? ` - ${day.dayEvents.map(e => e.time ? `${e.title}(${e.time})` : e.title).join(', ')}`
+              : '';
             const holiday = day.holidayName ? ` (${day.holidayName})` : '';
+
             text += `${month}.${dNum}(${dayName}) [${shift}]${holiday}${workout}${eventsText}\n`;
           }
         });
+
         return text;
       };
 
       const handleCopyText = () => {
-        navigator.clipboard.writeText(generateTextSummary()).then(() => { setCopySuccess(true); setTimeout(() => setCopySuccess(false), 2000); });
+        const text = generateTextSummary();
+        navigator.clipboard.writeText(text).then(() => {
+          setCopySuccess(true);
+          setTimeout(() => setCopySuccess(false), 2000);
+        });
       };
 
       return (
-        <div onClick={onClose} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div onClick={(e) => e.stopPropagation()} className="bg-slate-100 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 my-auto flex flex-col">
+        <div 
+          onClick={onClose}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-slate-100 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 my-auto animate-in zoom-in-95 duration-150 flex flex-col"
+          >
             <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between shrink-0">
-              <div className="flex items-center space-x-2"><i className="fa-solid fa-calendar-check text-indigo-400"></i><h3 className="text-sm font-bold">{year}년 {month}월 스케줄</h3></div>
+              <div className="flex items-center space-x-2">
+                <i className="fa-solid fa-calendar-check text-indigo-400"></i>
+                <h3 className="text-sm font-bold">{year}년 {month}월 스케줄</h3>
+              </div>
+
               <div className="flex items-center space-x-2">
                 {shareTab === 'calendar' && (
-                  <button onClick={handleSaveCroppedImage} disabled={isGenerating} className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition flex items-center space-x-1.5 shadow-sm active:scale-95 disabled:opacity-50">
-                    <i className={`fa-solid ${isGenerating ? 'fa-spinner fa-spin' : 'fa-image'}`}></i><span>{isGenerating ? '생성중...' : '이미지 저장'}</span>
+                  <button
+                    onClick={handleSaveCroppedImage}
+                    disabled={isGenerating}
+                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition flex items-center space-x-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                    title="크롭할 필요 없이 달력만 이미지로 저장"
+                  >
+                    <i className={`fa-solid ${isGenerating ? 'fa-spinner fa-spin' : 'fa-image'}`}></i>
+                    <span>{isGenerating ? '생성중...' : '이미지 저장'}</span>
                   </button>
                 )}
+
                 <div className="bg-slate-800 p-0.5 rounded-lg flex text-[11px] font-semibold">
-                  <button onClick={() => setShareTab('calendar')} className={`px-2.5 py-1 rounded-md transition ${shareTab === 'calendar' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}>달력 뷰</button>
-                  <button onClick={() => setShareTab('list')} className={`px-2.5 py-1 rounded-md transition ${shareTab === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}>목록 뷰</button>
+                  <button
+                    onClick={() => setShareTab('calendar')}
+                    className={`px-2.5 py-1 rounded-md transition ${shareTab === 'calendar' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    달력 뷰
+                  </button>
+                  <button
+                    onClick={() => setShareTab('list')}
+                    className={`px-2.5 py-1 rounded-md transition ${shareTab === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    목록 뷰
+                  </button>
                 </div>
-                <button onClick={onClose} className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition"><i className="fa-solid fa-xmark text-base"></i></button>
+                <button 
+                  onClick={onClose} 
+                  className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition"
+                  title="닫기"
+                >
+                  <i className="fa-solid fa-xmark text-base"></i>
+                </button>
               </div>
             </div>
+
             <div className="p-3 sm:p-4 overflow-y-auto custom-scrollbar">
               {shareTab === 'calendar' ? (
-                <div ref={cardRef} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+                <div 
+                  ref={cardRef}
+                  className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3"
+                >
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                     <div>
                       <h4 className="text-base font-black text-slate-900 tracking-tight">{year}년 {month}월 스케줄</h4>
                       <p className="text-[10.5px] text-slate-400 font-medium mt-0.5">당직 {monthSummary.당직}회 · 주간 {monthSummary.주간}회 · 비번 {monthSummary.비번}회 · 운동 {monthSummary.총운동}회</p>
                     </div>
-                    <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-100">근무표</span>
+                    <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-100">
+                      근무표
+                    </span>
                   </div>
+
                   <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
                     <div className="grid grid-cols-7 text-center bg-slate-50/80 font-bold text-[11px] py-2 border-b border-slate-200 text-slate-600">
-                      <div className="text-red-500">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="text-blue-500">토</div>
+                      <div className="text-red-500">일</div>
+                      <div>월</div>
+                      <div>화</div>
+                      <div>수</div>
+                      <div>목</div>
+                      <div>금</div>
+                      <div className="text-blue-500">토</div>
                     </div>
+
                     <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 bg-white">
                       {monthlyDays.map((day, idx) => {
                         const isSunday = day.dayOfWeek === 0;
                         const isSaturday = day.dayOfWeek === 6;
                         const isHoliday = !!day.holidayName;
                         const shift = day.shiftInfo.shift;
+
                         let numColor = "text-slate-800";
                         if (!day.isCurrentMonth) numColor = "text-slate-300";
                         else if (day.isWorkout) {
@@ -843,26 +1479,64 @@
                           else numColor = "text-white font-black";
                         } else if (isSunday || isHoliday) numColor = "text-red-500 font-bold";
                         else if (isSaturday) numColor = "text-blue-500 font-bold";
+
                         let cellBgStyle = "bg-white";
-                        if (!day.isCurrentMonth) cellBgStyle = "bg-slate-50/40";
-                        else if (day.isWorkout) cellBgStyle = "bg-[#1e3a8a]";
+                        if (!day.isCurrentMonth) {
+                          cellBgStyle = "bg-slate-50/40";
+                        } else if (day.isWorkout) {
+                          cellBgStyle = "bg-[#1e3a8a]";
+                        }
+
                         return (
-                          <div key={idx} className={`min-h-[72px] p-1.5 flex flex-col justify-between ${cellBgStyle}`}>
+                          <div
+                            key={idx}
+                            className={`min-h-[72px] p-1.5 flex flex-col justify-between ${cellBgStyle}`}
+                          >
                             <div className="flex items-center justify-between leading-none">
                               <div className="flex items-center space-x-1 truncate">
-                                <span className={`text-[11px] font-bold ${numColor}`}>{day.dayNum}</span>
-                                {day.holidayName && day.isCurrentMonth && (<span className="text-[8.5px] text-red-500 truncate font-semibold">{day.holidayName}</span>)}
+                                <span className={`text-[11px] font-bold ${numColor}`}>
+                                  {day.dayNum}
+                                </span>
+                                {day.holidayName && day.isCurrentMonth && (
+                                  <span className="text-[8.5px] text-red-500 truncate font-semibold">
+                                    {day.holidayName}
+                                  </span>
+                                )}
                               </div>
-                              {day.workoutInfo && day.isCurrentMonth && (<span className="text-[10px] leading-none shrink-0" title={day.workoutInfo.label}>{day.workoutInfo.icon}</span>)}
+                              {day.workoutInfo && day.isCurrentMonth && (
+                                <span className="text-[10px] leading-none shrink-0" title={day.workoutInfo.label}>
+                                  {day.workoutInfo.icon}
+                                </span>
+                              )}
                             </div>
+
                             <div className="my-auto py-1 flex items-center justify-center">
-                              {day.isCurrentMonth && (<MiniRoundShiftBadge shift={shift} isDarkBg={day.isWorkout} />)}
+                              {day.isCurrentMonth && (
+                                <MiniRoundShiftBadge 
+                                  shift={shift} 
+                                  isDarkBg={day.isWorkout} 
+                                />
+                              )}
                             </div>
+
                             <div className="min-h-[14px] flex flex-col justify-end space-y-0.5">
                               {day.dayEvents.slice(0, 1).map((evt) => (
-                                <div key={evt.id} className={`text-[8px] px-1 py-0.2 rounded truncate font-semibold leading-tight shadow-2xs ${day.isWorkout ? 'bg-white/95 text-slate-900' : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'}`}>{evt.title}</div>
+                                <div 
+                                  key={evt.id} 
+                                  className={`text-[8px] px-1 py-0.2 rounded truncate font-semibold leading-tight shadow-2xs ${
+                                    day.isWorkout 
+                                      ? 'bg-white/95 text-slate-900' 
+                                      : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
+                                  }`}
+                                >
+                                  {evt.title}
+                                </div>
                               ))}
-                              {day.dayEvents.length > 1 && (<div className={`text-[7px] font-bold text-right leading-none ${day.isWorkout ? 'text-blue-200' : 'text-slate-400'}`}>+{day.dayEvents.length - 1}</div>)}
+                              {day.dayEvents.length > 1 && (
+                                <div className={`text-[7px] font-bold text-right leading-none ${day.isWorkout ? 'text-blue-200' : 'text-slate-400'}`}>
+                                  +{day.dayEvents.length - 1}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
@@ -877,30 +1551,64 @@
                       <h4 className="text-base font-black text-slate-900">{year}년 {month}월 전체 일정 목록</h4>
                       <p className="text-[11px] text-slate-400 mt-0.5">근무 및 등록된 모든 개인 일정</p>
                     </div>
-                    <button onClick={handleCopyText} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-xs active:scale-95">
-                      <i className={`fa-solid ${copySuccess ? 'fa-check' : 'fa-copy'}`}></i><span>{copySuccess ? '복사 완료!' : '텍스트 복사'}</span>
+                    <button
+                      onClick={handleCopyText}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-xs active:scale-95"
+                    >
+                      <i className={`fa-solid ${copySuccess ? 'fa-check' : 'fa-copy'}`}></i>
+                      <span>{copySuccess ? '복사 완료!' : '텍스트 복사'}</span>
                     </button>
                   </div>
+
                   <div className="space-y-1.5 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
                     {monthlyDays.filter(d => d.isCurrentMonth).map((day) => {
                       const isSunday = day.dayOfWeek === 0;
                       const isSaturday = day.dayOfWeek === 6;
                       const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
                       const shift = day.shiftInfo.shift;
+
                       let shiftColor = "bg-slate-100 text-slate-700";
                       if (shift === '당직') shiftColor = "bg-blue-600 text-white";
                       if (shift === '주간') shiftColor = "bg-amber-400 text-slate-900 font-bold";
                       if (shift === '비번') shiftColor = "bg-rose-50 text-rose-600 border border-rose-200";
+
                       return (
-                        <div key={day.dateStr} className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${day.isWorkout ? 'bg-blue-50/50 border-blue-200' : 'bg-slate-50/60 border-slate-100'}`}>
+                        <div
+                          key={day.dateStr}
+                          className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                            day.isWorkout ? 'bg-blue-50/50 border-blue-200' : 'bg-slate-50/60 border-slate-100'
+                          }`}
+                        >
                           <div className="flex items-center space-x-2">
-                            <span className={`font-bold w-12 ${isSunday ? 'text-red-500' : isSaturday ? 'text-blue-500' : 'text-slate-800'}`}>{month}.{String(day.dayNum).padStart(2, '0')} ({dayNames[day.dayOfWeek]})</span>
-                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${shiftColor}`}>{shift}</span>
-                            {day.holidayName && (<span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.2 rounded">{day.holidayName}</span>)}
-                            {day.workoutInfo && (<span className="text-[10px] font-bold text-blue-900 bg-blue-100 px-1.5 py-0.2 rounded flex items-center space-x-0.5"><span>{day.workoutInfo.icon}</span><span>{day.workoutInfo.label}</span></span>)}
+                            <span className={`font-bold w-12 ${isSunday ? 'text-red-500' : isSaturday ? 'text-blue-500' : 'text-slate-800'}`}>
+                              {month}.{String(day.dayNum).padStart(2, '0')} ({dayNames[day.dayOfWeek]})
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${shiftColor}`}>
+                              {shift}
+                            </span>
+                            {day.holidayName && (
+                              <span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.2 rounded">
+                                {day.holidayName}
+                              </span>
+                            )}
+                            {day.workoutInfo && (
+                              <span className="text-[10px] font-bold text-blue-900 bg-blue-100 px-1.5 py-0.2 rounded flex items-center space-x-0.5">
+                                <span>{day.workoutInfo.icon}</span>
+                                <span>{day.workoutInfo.label}</span>
+                              </span>
+                            )}
                           </div>
+
                           <div className="text-right">
-                            {day.dayEvents.length > 0 ? (day.dayEvents.map(e => (<span key={e.id} className="inline-block text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded ml-1">{e.title} {e.time && `(${e.time})`}</span>))) : (<span className="text-[10px] text-slate-300">-</span>)}
+                            {day.dayEvents.length > 0 ? (
+                              day.dayEvents.map(e => (
+                                <span key={e.id} className="inline-block text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded ml-1">
+                                  {e.title} {e.time && `(${e.time})`}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[10px] text-slate-300">-</span>
+                            )}
                           </div>
                         </div>
                       );
@@ -909,208 +1617,6 @@
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      );
-    }
-
-    function MiniRoundShiftBadge({ shift, isDarkBg }) {
-      if (shift === '당직') return (<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#2563eb" stroke={isDarkBg ? "#60a5fa" : "none"} strokeWidth="1" /><text x="11" y="14.5" textAnchor="middle" fill="#ffffff" fontSize="10.5" fontWeight="700">당</text></svg>);
-      if (shift === '주간') return (<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#fbbf24" /><text x="11" y="14.5" textAnchor="middle" fill="#0f172a" fontSize="10.5" fontWeight="700">주</text></svg>);
-      if (shift === '비번') return (<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill={isDarkBg ? "#ffe4e6" : "#fff1f2"} stroke={isDarkBg ? "#f43f5e" : "#fecdd3"} strokeWidth="1" /><text x="11" y="14.5" textAnchor="middle" fill={isDarkBg ? "#9f1239" : "#e11d48"} fontSize="10.5" fontWeight="700">비</text></svg>);
-      return (<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#f1f5f9" /><text x="11" y="14.5" textAnchor="middle" fill="#334155" fontSize="10.5" fontWeight="700">{shift.substring(0, 1)}</text></svg>);
-    }
-
-    function QuickPreviewPopup({ dayInfo, workoutInfo, onSelectWorkout, onClose, onOpenDetail }) {
-      const { dateStr, holidayName, shiftInfo, dayEvents, dayOfWeek } = dayInfo;
-      const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dayOfWeek];
-      const shift = shiftInfo.shift;
-      let badgeColor = "bg-slate-800 text-white";
-      if (shift === '당직') badgeColor = "bg-blue-600 text-white";
-      if (shift === '주간') badgeColor = "bg-amber-400 text-slate-900";
-      if (shift === '비번') badgeColor = "bg-rose-500 text-white";
-
-      return (
-        <div onClick={onClose} className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl max-w-xs w-full overflow-hidden border border-slate-100 p-4 space-y-3.5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <div>
-                <div className="flex items-center space-x-1.5">
-                  <h4 className="text-base font-bold text-slate-800">{dateStr} ({dayOfWeekKorean})</h4>
-                  {holidayName && (<span className="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">{holidayName}</span>)}
-                </div>
-                <div className="text-[11px] text-slate-400 mt-0.5 flex items-center space-x-1.5">
-                  <span>근무:</span><span className={`px-2 py-0.5 rounded-md font-bold text-xs ${badgeColor}`}>{shift}</span>
-                </div>
-              </div>
-              <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"><i className="fa-solid fa-xmark text-base"></i></button>
-            </div>
-            <div>
-              <div className="text-[11px] font-bold text-slate-500 mb-1.5 flex items-center justify-between">
-                <span>오늘의 운동</span>
-                {workoutInfo && (<button onClick={() => onSelectWorkout(null)} className="text-[10px] text-rose-500 hover:underline font-semibold">기록 취소</button>)}
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => onSelectWorkout('running')} className={`py-2 px-3 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 border shadow-2xs ${workoutInfo?.type === 'running' ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] ring-2 ring-blue-400' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`}>
-                  <span>🏃</span><span>달리기 {workoutInfo?.type === 'running' && '✓'}</span>
-                </button>
-                <button type="button" onClick={() => onSelectWorkout('crossfit')} className={`py-2 px-3 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 border shadow-2xs ${workoutInfo?.type === 'crossfit' ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] ring-2 ring-blue-400' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`}>
-                  <span>🏋️</span><span>크로스핏 {workoutInfo?.type === 'crossfit' && '✓'}</span>
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-              <div className="text-xs font-bold text-slate-500">등록된 일정 ({dayEvents.length})</div>
-              {dayEvents.length > 0 ? (
-                dayEvents.map((evt) => (
-                  <div key={evt.id} className="p-2.5 bg-emerald-50/80 border border-emerald-200/80 rounded-xl space-y-0.5">
-                    <div className="font-bold text-xs text-emerald-950 flex items-center justify-between"><span>{evt.title}</span>{evt.time && <span className="text-[10px] bg-white px-1.5 py-0.5 rounded text-emerald-700 font-bold border">{evt.time}</span>}</div>
-                    {evt.note && <div className="text-[11px] text-emerald-800/80 leading-tight">{evt.note}</div>}
-                  </div>
-                ))
-              ) : (<p className="text-xs text-slate-400 text-center py-4 bg-slate-50 rounded-xl border border-dashed">등록된 일정이 없습니다.</p>)}
-            </div>
-            <button onClick={onOpenDetail} className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center space-x-1.5">
-              <i className="fa-solid fa-pen-to-square text-[11px]"></i><span>일정 등록 / 상세 수정</span>
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    function DateDetailModal({ dateStr, workoutInfo, onSelectWorkout, onClose, settings, overrideShift, onSetOverride, events, onAddEvent, onDeleteEvent }) {
-      const autoCalculated = calculateAutoShift(dateStr, settings);
-      const currentShift = overrideShift || autoCalculated.shift;
-      const isManual = !!overrideShift;
-      const [title, setTitle] = useState('');
-      const [time, setTime] = useState('');
-      const [note, setNote] = useState('');
-
-      const handleAddEventSubmit = (e) => {
-        e.preventDefault();
-        if (!title.trim()) return;
-        onAddEvent({ id: Date.now().toString(), title: title.trim(), time, note });
-        setTitle(''); setTime(''); setNote('');
-      };
-
-      const dateObj = new Date(dateStr + 'T00:00:00');
-      const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dateObj.getDay()];
-      const holidayName = getHolidayName(dateStr);
-
-      return (
-        <div onClick={onClose} className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 my-auto flex flex-col max-h-[90vh]">
-            <div className="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between shrink-0">
-              <div>
-                <div className="flex items-center space-x-2">
-                  <h3 className="text-base sm:text-lg font-bold">{dateStr} ({dayOfWeekKorean})</h3>
-                  {holidayName && (<span className="bg-red-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">{holidayName}</span>)}
-                </div>
-                <p className="text-[11px] text-slate-300 mt-0.5">근무 수정, 운동 종류 선택 및 일정 관리</p>
-              </div>
-              <button onClick={onClose} className="p-1.5 hover:bg-slate-800 rounded-xl text-slate-300 hover:text-white transition"><i className="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">오늘의 운동 기록</label>
-                  {workoutInfo && (<button onClick={() => onSelectWorkout(null)} className="text-[11px] text-rose-500 hover:underline font-semibold">기록 취소</button>)}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => onSelectWorkout('running')} className={`p-2.5 rounded-2xl border transition flex items-center space-x-2.5 ${workoutInfo?.type === 'running' ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm ring-2 ring-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
-                    <span className="text-2xl">🏃</span><div className="text-left"><div className="font-bold text-xs">달리기</div><div className={`text-[10px] ${workoutInfo?.type === 'running' ? 'text-blue-200' : 'text-slate-400'}`}>{workoutInfo?.type === 'running' ? '선택 완료됨' : '러닝 기록'}</div></div>
-                  </button>
-                  <button type="button" onClick={() => onSelectWorkout('crossfit')} className={`p-2.5 rounded-2xl border transition flex items-center space-x-2.5 ${workoutInfo?.type === 'crossfit' ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm ring-2 ring-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
-                    <span className="text-2xl">🏋️</span><div className="text-left"><div className="font-bold text-xs">크로스핏</div><div className={`text-[10px] ${workoutInfo?.type === 'crossfit' ? 'text-blue-200' : 'text-slate-400'}`}>{workoutInfo?.type === 'crossfit' ? '선택 완료됨' : '역도/와드 기록'}</div></div>
-                  </button>
-                </div>
-              </div>
-              <hr className="border-slate-100" />
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">오늘의 근무 설정</label>
-                <div className="bg-slate-50 rounded-xl p-2.5 mb-2.5 border border-slate-200/80 flex items-center justify-between text-xs">
-                  <div><span className="text-slate-500">자동 스케줄: </span><span className="font-bold text-slate-800">{autoCalculated.shift}</span>{autoCalculated.isRuleModified && (<span className="text-red-500 font-medium ml-1">({autoCalculated.reason} 비번)</span>)}</div>
-                  {isManual ? (<span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-md">수동 변경됨</span>) : (<span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-md">자동 적용중</span>)}
-                </div>
-                <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
-                  {['주간', '당직', '비번', '연차'].map((shiftOpt) => {
-                    const isSelected = currentShift === shiftOpt;
-                    return (
-                      <button key={shiftOpt} onClick={() => onSetOverride(shiftOpt)} className={`py-2 px-2 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center space-y-0.5 ${isSelected ? "bg-slate-800 text-white border-slate-800 shadow-sm" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"}`}>
-                        <span>{shiftOpt}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {isManual && (<button onClick={() => onSetOverride(null)} className="mt-2 text-xs text-blue-600 hover:underline font-medium flex items-center space-x-1"><i className="fa-solid fa-rotate-left text-[10px]"></i><span>기본 자동 스케줄로 복원</span></button>)}
-              </div>
-              <hr className="border-slate-100" />
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">개인 일정 ({events.length})</label>
-                {events.length > 0 ? (
-                  <div className="space-y-1.5 mb-3 max-h-32 overflow-y-auto custom-scrollbar">
-                    {events.map((evt) => (
-                      <div key={evt.id} className="p-2 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between text-xs">
-                        <div><div className="font-bold text-emerald-950">{evt.title}</div>{evt.time && <div className="text-emerald-700 font-semibold text-[10.5px]">{evt.time}</div>}{evt.note && <div className="text-emerald-800/80 text-[10.5px] mt-0.5">{evt.note}</div>}</div>
-                        <button onClick={() => onDeleteEvent(evt.id)} className="text-slate-400 hover:text-red-500 p-1 transition" title="일정 삭제"><i className="fa-regular fa-trash-can"></i></button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (<p className="text-xs text-slate-400 mb-3 text-center py-2 bg-slate-50 rounded-xl border border-dashed">등록된 개인 일정이 없습니다.</p>)}
-                <form onSubmit={handleAddEventSubmit} className="space-y-2 bg-slate-50/70 p-3 rounded-2xl border border-slate-200">
-                  <div className="text-xs font-bold text-slate-700">새 일정 추가</div>
-                  <div className="flex space-x-2">
-                    <input type="text" placeholder="일정 제목" value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required />
-                    <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-24 px-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <input type="text" placeholder="메모 (선택사항)" value={note} onChange={(e) => setNote(e.target.value)} className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
-                  <button type="submit" className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition">일정 등록하기</button>
-                </form>
-              </div>
-            </div>
-            <div className="bg-slate-50 px-5 py-3 border-t border-slate-100 flex justify-end shrink-0">
-              <button onClick={onClose} className="px-4 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded-xl hover:bg-slate-900 transition">닫기</button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    function SettingsModal({ settings, onSave, onClose }) {
-      const [anchorDate, setAnchorDate] = useState(settings.anchorDate);
-      const [anchorShift, setAnchorShift] = useState(settings.anchorShift);
-
-      const handleSubmit = (e) => { e.preventDefault(); onSave({ anchorDate, anchorShift }); };
-
-      return (
-        <div onClick={onClose} className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl shadow-xl max-w-sm w-full overflow-hidden border border-slate-100">
-            <div className="bg-slate-800 text-white px-5 py-4 flex items-center justify-between">
-              <div className="flex items-center space-x-2"><i className="fa-solid fa-sliders text-blue-400"></i><h3 className="text-base font-bold">스케줄 기준 패턴 설정</h3></div>
-              <button onClick={onClose} className="p-1 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition"><i className="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-800 leading-relaxed">
-                <p className="font-semibold mb-1">💡 교대 패턴 작동 규칙</p>
-                <p>설정한 <strong>기준일</strong>의 근무부터 시작하여 <br /><span className="font-bold text-blue-900">주간 ➔ 당직 ➔ 비번</span> 순서로 3일 주기가 순환합니다.</p>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">스케줄 시작 기준일</label>
-                <input type="date" value={anchorDate} onChange={(e) => setAnchorDate(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500" required />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">기준일의 근무</label>
-                <select value={anchorShift} onChange={(e) => setAnchorShift(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                  <option value="당직">당직</option>
-                  <option value="주간">주간</option>
-                  <option value="비번">비번</option>
-                </select>
-              </div>
-              <div className="pt-2 flex justify-end space-x-2">
-                <button type="button" onClick={onClose} className="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl hover:bg-slate-50 transition">취소</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition shadow-sm">설정 저장</button>
-              </div>
-            </form>
           </div>
         </div>
       );
