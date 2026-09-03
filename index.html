@@ -81,15 +81,20 @@
       return { shift: rawShift, isRuleModified: false, originalShift: rawShift };
     }
 
-    function getWorkoutInfo(val) {
-      if (!val) return null;
-      if (val === 'crossfit' || val === '크로스핏') return { type: 'crossfit', label: '크로스핏', icon: '🏋️' };
-      return { type: 'running', label: '달리기', icon: '🏃' };
+    function parseWorkout(val) {
+      if (!val) return { types: [], details: {} };
+      if (typeof val === 'string') {
+        if (val === 'crossfit' || val === '크로스핏') return { types: ['crossfit'], details: {} };
+        if (val === 'running' || val === '달리기') return { types: ['running'], details: {} };
+        return { types: [], details: {} };
+      }
+      return { types: val.types || [], details: val.details || {} };
     }
 
     function App() {
       const today = new Date();
       const [viewMode, setViewMode] = useState('monthly');
+      const [isWorkoutMode, setIsWorkoutMode] = useState(false);
       const [currentDate, setCurrentDate] = useState(new Date());
       const [user, setUser] = useState(() => localStorage.getItem('shift_app_custom_user') || null);
       const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -207,12 +212,15 @@
         localStorage.setItem('shift_app_workouts', JSON.stringify(workouts));
       }, [settings, overrides, events, workouts, user, dataLoaded]);
 
-      const setWorkoutType = (dateStr, type) => {
+      const updateWorkoutData = (dateStr, newTypes, newDetails) => {
         if (!dateStr) return;
         setWorkouts(prev => {
           const next = { ...prev };
-          if (!type || next[dateStr] === type) delete next[dateStr];
-          else next[dateStr] = type;
+          if (newTypes.length === 0) {
+            delete next[dateStr];
+          } else {
+            next[dateStr] = { types: newTypes, details: newDetails };
+          }
           return next;
         });
       };
@@ -298,9 +306,10 @@
         const isToday = dateStr === todayStr;
         const dayOfWeek = d.getDay();
         const holidayName = getHolidayName(dateStr);
-        const rawWorkout = workouts[dateStr];
-        const workoutInfo = getWorkoutInfo(rawWorkout);
-        const isWorkout = !!workoutInfo;
+        
+        const workoutParsed = parseWorkout(workouts[dateStr]);
+        const hasWorkout = workoutParsed.types.length > 0;
+
         let shiftInfo;
         if (overrides[dateStr]) {
           shiftInfo = { shift: overrides[dateStr], isOverride: true, isRuleModified: false };
@@ -308,7 +317,18 @@
           const auto = calculateAutoShift(dateStr, settings);
           shiftInfo = { shift: auto.shift, isOverride: false, isRuleModified: auto.isRuleModified, reason: auto.reason };
         }
-        return { dateObj: new Date(d), dateStr, dayNum: d.getDate(), dayOfWeek, isToday, holidayName, shiftInfo, workoutInfo, isWorkout, dayEvents: events[dateStr] || [] };
+        return { 
+          dateObj: new Date(d), 
+          dateStr, 
+          dayNum: d.getDate(), 
+          dayOfWeek, 
+          isToday, 
+          holidayName, 
+          shiftInfo, 
+          workoutParsed, 
+          hasWorkout, 
+          dayEvents: events[dateStr] || [] 
+        };
       };
 
       const getMonthlyDays = (targetDate) => {
@@ -352,10 +372,10 @@
           if (day.isCurrentMonth) {
             const s = day.shiftInfo.shift;
             if (summary[s] !== undefined) summary[s]++;
-            if (day.workoutInfo) {
+            if (day.hasWorkout) {
               summary.총운동++;
-              if (day.workoutInfo.type === 'crossfit') summary.크로스핏++;
-              else summary.달리기++;
+              if (day.workoutParsed.types.includes('crossfit')) summary.크로스핏++;
+              if (day.workoutParsed.types.includes('running')) summary.달리기++;
             }
           }
         });
@@ -376,8 +396,8 @@
         if (viewMode === 'monthly') {
           const days = getMonthlyDays(targetDate);
           return (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="grid grid-cols-7 border-b border-slate-200 text-center bg-slate-50/70 font-semibold text-xs py-2.5 text-slate-600">
+            <div className={`rounded-2xl shadow-sm border overflow-hidden transition-colors ${isWorkoutMode ? 'bg-indigo-950/5 border-indigo-200' : 'bg-white border-slate-200'}`}>
+              <div className={`grid grid-cols-7 border-b text-center font-semibold text-xs py-2.5 ${isWorkoutMode ? 'bg-indigo-900/10 text-indigo-900 border-indigo-200' : 'bg-slate-50/70 text-slate-600 border-slate-200'}`}>
                 <div className="text-red-500">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="text-blue-500">토</div>
               </div>
               <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100">
@@ -387,16 +407,16 @@
                   const isHoliday = !!day.holidayName;
                   let dateNumColor = "text-slate-800";
                   if (!day.isCurrentMonth) dateNumColor = "text-slate-300";
-                  else if (day.isWorkout) {
+                  else if (day.hasWorkout) {
                     if (isSunday || isHoliday) dateNumColor = "text-rose-200 font-black";
                     else if (isSaturday) dateNumColor = "text-sky-200 font-black";
                     else dateNumColor = "text-white font-black";
                   } else if (isSunday || isHoliday) dateNumColor = "text-red-500 font-bold";
                   else if (isSaturday) dateNumColor = "text-blue-500 font-bold";
 
-                  let cellBgStyle = "bg-white";
+                  let cellBgStyle = isWorkoutMode ? 'bg-white/70' : 'bg-white';
                   if (!day.isCurrentMonth) cellBgStyle = "bg-slate-50/40";
-                  else if (day.isWorkout) cellBgStyle = "bg-[#1e3a8a] border-[#254ea3] shadow-xs";
+                  else if (day.hasWorkout) cellBgStyle = isWorkoutMode ? "bg-[#31105e] border-[#4c1d95] shadow-xs" : "bg-[#1e3a8a] border-[#254ea3] shadow-xs";
 
                   return (
                     <div
@@ -413,30 +433,50 @@
                           <div className="flex items-center space-x-1 truncate">
                             <span className={`text-xs sm:text-sm ${dateNumColor}`}>{day.dayNum}</span>
                             {day.holidayName && day.isCurrentMonth && (
-                              <span className={`text-[9.5px] font-semibold truncate ${day.isWorkout ? 'text-rose-200 font-bold' : 'text-red-500'}`}>{day.holidayName}</span>
+                              <span className={`text-[9.5px] font-semibold truncate ${day.hasWorkout ? 'text-rose-200 font-bold' : 'text-red-500'}`}>{day.holidayName}</span>
                             )}
                           </div>
-                          {day.workoutInfo && day.isCurrentMonth && (
-                            <span className="text-[11px] bg-[#142862] text-white border border-blue-300/40 rounded-md px-1 py-0.2 font-bold shadow-xs flex items-center justify-center shrink-0" title={day.workoutInfo.label}>
-                              {day.workoutInfo.icon}
-                            </span>
+                          {day.hasWorkout && day.isCurrentMonth && (
+                            <div className="flex items-center space-x-0.5 shrink-0">
+                              {day.workoutParsed.types.map(t => (
+                                <span key={t} className={`text-[10px] rounded-md px-1 py-0.2 font-bold shadow-xs border ${isWorkoutMode ? 'bg-[#4c1d95] text-purple-100 border-purple-400/40' : 'bg-[#142862] text-white border-blue-300/40'}`} title={t === 'running' ? '달리기' : '크로스핏'}>
+                                  {t === 'running' ? '🏃' : '🏋️'}
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </div>
                       <div className="my-0.5 flex flex-col items-center justify-center">
-                        <ShiftBadge info={day.shiftInfo} isDarkBg={day.isWorkout && day.isCurrentMonth} />
+                        {isWorkoutMode ? (
+                          <div className="text-[10px] font-bold text-slate-500/80">
+                            {day.isCurrentMonth && day.shiftInfo.shift}
+                          </div>
+                        ) : (
+                          <ShiftBadge info={day.shiftInfo} isDarkBg={day.hasWorkout && day.isCurrentMonth} />
+                        )}
                       </div>
                       <div className="space-y-0.5 mt-auto max-h-[34px] overflow-hidden">
-                        {day.dayEvents.slice(0, 1).map((evt) => (
-                          <div key={evt.id} className={`text-[9px] px-1.5 py-0.5 rounded truncate font-semibold flex items-center justify-between shadow-2xs border ${day.isWorkout ? "bg-white/95 text-slate-900 border-blue-200" : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200/80"}`}>
-                            <span className="truncate">{evt.title}</span>
-                            {evt.time && <span className={`text-[8px] pl-1 shrink-0 font-bold ${day.isWorkout ? 'text-blue-800' : 'text-emerald-700'}`}>{evt.time}</span>}
-                          </div>
-                        ))}
-                        {day.dayEvents.length > 1 && (
-                          <div className={`text-[7.5px] text-right font-bold leading-none ${day.isWorkout ? 'text-blue-200' : 'text-slate-400'}`}>
-                            +{day.dayEvents.length - 1}
-                          </div>
+                        {isWorkoutMode ? (
+                          day.hasWorkout && day.isCurrentMonth ? (
+                            <div className="text-[9px] bg-purple-50 text-purple-900 border border-purple-200 px-1 py-0.5 rounded truncate font-semibold">
+                              {day.workoutParsed.details.wod || day.workoutParsed.details.runningTime || '운동 기록 있음'}
+                            </div>
+                          ) : null
+                        ) : (
+                          <>
+                            {day.dayEvents.slice(0, 1).map((evt) => (
+                              <div key={evt.id} className={`text-[9px] px-1.5 py-0.5 rounded truncate font-semibold flex items-center justify-between shadow-2xs border ${day.hasWorkout ? "bg-white/95 text-slate-900 border-blue-200" : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200/80"}`}>
+                                <span className="truncate">{evt.title}</span>
+                                {evt.time && <span className={`text-[8px] pl-1 shrink-0 font-bold ${day.hasWorkout ? 'text-blue-800' : 'text-emerald-700'}`}>{evt.time}</span>}
+                              </div>
+                            ))}
+                            {day.dayEvents.length > 1 && (
+                              <div className={`text-[7.5px] text-right font-bold leading-none ${day.hasWorkout ? 'text-blue-200' : 'text-slate-400'}`}>
+                                +{day.dayEvents.length - 1}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -471,17 +511,21 @@
                   else if (shift === '비번') { shiftBoxStyle = "bg-rose-100/80 border-rose-200"; shiftLabelStyle = "text-rose-900 font-bold"; }
 
                   return (
-                    <div key={idx} className={`bg-white rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden ${day.isWorkout ? "ring-2 ring-[#1e3a8a] border-[#1e3a8a] bg-blue-50/40" : ""} ${day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"}`}>
+                    <div key={idx} className={`bg-white rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden ${day.hasWorkout ? "ring-2 ring-[#1e3a8a] border-[#1e3a8a] bg-blue-50/40" : ""} ${day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"}`}>
                       <div className={`p-2.5 border-b flex items-center justify-between ${headerBg}`}>
                         <div>
                           <div className="text-[11px] font-semibold opacity-90">{dayNames[day.dayOfWeek]}</div>
                           <div className={`text-base font-bold leading-none ${dateNumColor}`}>{day.dateStr.substring(5).replace('-', '.')}</div>
                         </div>
                         <div className="flex items-center space-x-1.5">
-                          {day.workoutInfo && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#1e3a8a] text-white flex items-center space-x-1 shadow-xs">
-                              <span>{day.workoutInfo.icon}</span><span>{day.workoutInfo.label}</span>
-                            </span>
+                          {day.hasWorkout && (
+                            <div className="flex items-center space-x-1">
+                              {day.workoutParsed.types.map(t => (
+                                <span key={t} className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#1e3a8a] text-white shadow-xs">
+                                  {t === 'running' ? '🏃 러닝' : '🏋️ 크로스핏'}
+                                </span>
+                              ))}
+                            </div>
                           )}
                           {day.holidayName && (
                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${day.isToday ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'}`}>{day.holidayName}</span>
@@ -509,19 +553,9 @@
                             <div className="text-[10px] text-slate-300 text-center py-4">일정 없음</div>
                           )}
                         </div>
-                        <div className="space-y-1">
-                          <div className="grid grid-cols-2 gap-1">
-                            <button onClick={() => setWorkoutType(day.dateStr, 'running')} className={`py-1 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1 border active:scale-95 ${day.workoutInfo?.type === 'running' ? "bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-xs" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"}`}>
-                              <span>🏃</span><span>달리기</span>
-                            </button>
-                            <button onClick={() => setWorkoutType(day.dateStr, 'crossfit')} className={`py-1 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1 border active:scale-95 ${day.workoutInfo?.type === 'crossfit' ? "bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-xs" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"}`}>
-                              <span>🏋️</span><span>크로스핏</span>
-                            </button>
-                          </div>
-                          <button onClick={() => setSelectedDateStr(day.dateStr)} className="w-full py-1 text-xs font-medium text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center justify-center space-x-1">
-                            <i className="fa-solid fa-pen text-[10px]"></i><span>일정/근무 수정</span>
-                          </button>
-                        </div>
+                        <button onClick={() => setSelectedDateStr(day.dateStr)} className="w-full py-1 text-xs font-medium text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center justify-center space-x-1">
+                          <i className="fa-solid fa-pen text-[10px]"></i><span>일정/운동/근무 상세 수정</span>
+                        </button>
                       </div>
                     </div>
                   );
@@ -537,7 +571,7 @@
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5">
               <div className="text-center mb-3">
                 <h2 className="text-base sm:text-lg font-bold text-slate-800">{y}년 전체 달력 선택</h2>
-                <p className="text-xs text-slate-400">원하는 월을 터치하거나 손가락으로 이어서 연도를 이동하세요.</p>
+                <p className="text-xs text-slate-400">원하는 월을 터치하여 해당 달로 이동하세요.</p>
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
                 {Array.from({ length: 12 }, (_, i) => i).map((m) => {
@@ -611,26 +645,27 @@
             </div>
           </div>
 
-          <div className="mt-2 bg-white rounded-2xl p-2.5 sm:p-3 shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 select-none">
+          {/* 하단 통계 바 터치 시 운동 모드 토글 */}
+          <div onClick={() => setIsWorkoutMode(!isWorkoutMode)} className={`mt-2 rounded-2xl p-2.5 sm:p-3 shadow-sm border flex flex-col sm:flex-row items-center justify-between gap-2 select-none cursor-pointer transition-all ${isWorkoutMode ? 'bg-indigo-900 text-white border-indigo-950 ring-2 ring-indigo-400/50' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
             <div className="flex items-center space-x-2.5 w-full sm:w-auto">
-              <div className="w-8 h-8 rounded-xl bg-[#1e3a8a] text-white flex items-center justify-center text-sm shadow-xs shrink-0">💪</div>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm shadow-xs shrink-0 ${isWorkoutMode ? 'bg-indigo-700 text-white' : 'bg-[#1e3a8a] text-white'}`}>💪</div>
               <div>
-                <div className="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
-                  <span>이번 달 운동 통계</span>
-                  <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.2 rounded-full font-bold">Total {monthSummary.총운동}회</span>
+                <div className={`text-xs font-bold flex items-center space-x-1.5 ${isWorkoutMode ? 'text-indigo-100' : 'text-slate-800'}`}>
+                  <span>이번 달 운동 통계 {isWorkoutMode ? '(운동 모드 켜짐 ✨)' : ''}</span>
+                  <span className={`text-[10px] px-2 py-0.2 rounded-full font-bold ${isWorkoutMode ? 'bg-indigo-800 text-indigo-200' : 'text-blue-600 bg-blue-50'}`}>Total {monthSummary.총운동}회</span>
                 </div>
-                <div className="text-[10px] text-slate-400">달리기와 크로스핏 기록 요약</div>
+                <div className={`text-[10px] ${isWorkoutMode ? 'text-indigo-300' : 'text-slate-400'}`}>누르면 {isWorkoutMode ? '기본 근무 모드로 전환' : '운동 중심 월간 모드로 전환'}</div>
               </div>
             </div>
             <div className="flex items-center space-x-1.5 w-full sm:w-auto whitespace-nowrap">
-              <div className="flex items-center space-x-1 bg-blue-50/80 text-blue-900 px-2 py-1.5 rounded-xl border border-blue-100 text-xs font-bold flex-1 sm:flex-none justify-center"><span>🏃 달리기</span><span className="text-blue-600 font-extrabold text-sm pl-0.5">{monthSummary.달리기}</span></div>
-              <div className="flex items-center space-x-1 bg-indigo-50/80 text-indigo-900 px-2 py-1.5 rounded-xl border border-indigo-100 text-xs font-bold flex-[1.4] sm:flex-none justify-center"><span>🏋️ 크로스핏</span><span className="text-indigo-600 font-extrabold text-sm pl-0.5">{monthSummary.크로스핏}</span></div>
-              <div className="flex items-center space-x-1 bg-[#1e3a8a] text-white px-2 py-1.5 rounded-xl text-xs font-bold shadow-xs flex-1 sm:flex-none justify-center"><span>총 운동</span><span className="text-blue-200 font-black text-sm pl-0.5">{monthSummary.총운동}</span></div>
+              <div className={`flex items-center space-x-1 px-2 py-1.5 rounded-xl border text-xs font-bold flex-1 sm:flex-none justify-center ${isWorkoutMode ? 'bg-indigo-800/80 text-indigo-100 border-indigo-700' : 'bg-blue-50/80 text-blue-900 border-blue-100'}`}><span>🏃 달리기</span><span className={`font-extrabold text-sm pl-0.5 ${isWorkoutMode ? 'text-indigo-200' : 'text-blue-600'}`}>{monthSummary.달리기}</span></div>
+              <div className={`flex items-center space-x-1 px-2 py-1.5 rounded-xl border text-xs font-bold flex-[1.4] sm:flex-none justify-center ${isWorkoutMode ? 'bg-indigo-800/80 text-indigo-100 border-indigo-700' : 'bg-indigo-50/80 text-indigo-900 border-indigo-100'}`}><span>🏋️ 크로스핏</span><span className={`font-extrabold text-sm pl-0.5 ${isWorkoutMode ? 'text-indigo-200' : 'text-indigo-600'}`}>{monthSummary.크로스핏}</span></div>
+              <div className={`flex items-center space-x-1 px-2 py-1.5 rounded-xl text-xs font-bold shadow-xs flex-1 sm:flex-none justify-center ${isWorkoutMode ? 'bg-indigo-950 text-indigo-100' : 'bg-[#1e3a8a] text-white'}`}><span>총 운동</span><span className={`font-black text-sm pl-0.5 ${isWorkoutMode ? 'text-indigo-200' : 'text-blue-200'}`}>{monthSummary.총운동}</span></div>
             </div>
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.3.0 (Direct Table Sync)</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.0 (Advanced Workout Support)</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -646,11 +681,22 @@
           </div>
 
           {previewDayInfo && (
-            <QuickPreviewPopup dayInfo={previewDayInfo} workoutInfo={previewDayInfo.workoutInfo} onSelectWorkout={(type) => setWorkoutType(previewDayInfo.dateStr, type)} onClose={() => setPreviewDayInfo(null)} onOpenDetail={() => { const target = previewDayInfo.dateStr; setPreviewDayInfo(null); setSelectedDateStr(target); }} />
+            <QuickPreviewPopup dayInfo={previewDayInfo} onClose={() => setPreviewDayInfo(null)} onOpenDetail={() => { const target = previewDayInfo.dateStr; setPreviewDayInfo(null); setSelectedDateStr(target); }} />
           )}
 
           {selectedDateStr && (
-            <DateDetailModal dateStr={selectedDateStr} workoutInfo={getWorkoutInfo(workouts[selectedDateStr])} onSelectWorkout={(type) => setWorkoutType(selectedDateStr, type)} onClose={() => setSelectedDateStr(null)} settings={settings} overrideShift={overrides[selectedDateStr]} onSetOverride={(shift) => { if (shift === null) { const copy = { ...overrides }; delete copy[selectedDateStr]; setOverrides(copy); } else { setOverrides({ ...overrides, [selectedDateStr]: shift }); } }} events={events[selectedDateStr] || []} onAddEvent={(newEvent) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: [...list, newEvent] }); }} onDeleteEvent={(eventId) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: list.filter((e) => e.id !== eventId) }); }} />
+            <DateDetailModal 
+              dateStr={selectedDateStr} 
+              workoutParsed={parseWorkout(workouts[selectedDateStr])} 
+              onSaveWorkout={(types, details) => updateWorkoutData(selectedDateStr, types, details)} 
+              onClose={() => setSelectedDateStr(null)} 
+              settings={settings} 
+              overrideShift={overrides[selectedDateStr]} 
+              onSetOverride={(shift) => { if (shift === null) { const copy = { ...overrides }; delete copy[selectedDateStr]; setOverrides(copy); } else { setOverrides({ ...overrides, [selectedDateStr]: shift }); } }} 
+              events={events[selectedDateStr] || []} 
+              onAddEvent={(newEvent) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: [...list, newEvent] }); }} 
+              onDeleteEvent={(eventId) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: list.filter((e) => e.id !== eventId) }); }} 
+            />
           )}
 
           {isShareModalOpen && (<ShareCaptureModal currDate={currDate} monthlyDays={currMonthlyDays} monthSummary={monthSummary} onClose={() => setIsShareModalOpen(false)} />)}
@@ -687,23 +733,19 @@
         setMessage('');
 
         try {
-          // user_schedules 테이블에서 해당 아이디 조회
-          const { data, error } = await client.from('user_schedules').select('*').eq('user_id', cleanId).single();
+          const { data } = await client.from('user_schedules').select('*').eq('user_id', cleanId).single();
 
           if (data) {
-            // 이미 존재하는 경우 PIN 번호 확인 (pin 필드가 저장되어 있다고 가정하거나 최초 로그인 시 등록)
             if (data.pin && data.pin !== pinInput) {
               setMessage('PIN 번호가 올바르지 않습니다.');
               setLoading(false);
               return;
             }
-            // PIN이 없거나 맞으면 로그인 성공
             if (!data.pin) {
               await client.from('user_schedules').update({ pin: pinInput }).eq('user_id', cleanId);
             }
             onLogin(cleanId);
           } else {
-            // 존재하지 않으면 새로 생성 (회원가입 겸 로그인)
             const { error: insertErr } = await client.from('user_schedules').insert({
               user_id: cleanId,
               pin: pinInput,
@@ -839,10 +881,16 @@
             const dNum = String(day.dayNum).padStart(2, '0');
             const dayName = dayNames[day.dayOfWeek];
             const shift = day.shiftInfo.shift;
-            const workout = day.workoutInfo ? ` [${day.workoutInfo.label} 완료]` : '';
+            let workoutStr = '';
+            if (day.hasWorkout) {
+              const parts = [];
+              if (day.workoutParsed.types.includes('running')) parts.push(`러닝(${day.workoutParsed.details.runningTime || '-'}, ${day.workoutParsed.details.distance || '-'})`);
+              if (day.workoutParsed.types.includes('crossfit')) parts.push(`크로스핏(${day.workoutParsed.details.wod || '-'})`);
+              workoutStr = ` [운동: ${parts.join(', ')}]`;
+            }
             const eventsText = day.dayEvents.length > 0 ? ` - ${day.dayEvents.map(e => e.time ? `${e.title}(${e.time})` : e.title).join(', ')}` : '';
             const holiday = day.holidayName ? ` (${day.holidayName})` : '';
-            text += `${month}.${dNum}(${dayName}) [${shift}]${holiday}${workout}${eventsText}\n`;
+            text += `${month}.${dNum}(${dayName}) [${shift}]${holiday}${workoutStr}${eventsText}\n`;
           }
         });
         return text;
@@ -892,7 +940,7 @@
                         const shift = day.shiftInfo.shift;
                         let numColor = "text-slate-800";
                         if (!day.isCurrentMonth) numColor = "text-slate-300";
-                        else if (day.isWorkout) {
+                        else if (day.hasWorkout) {
                           if (isSunday || isHoliday) numColor = "text-rose-200 font-black";
                           else if (isSaturday) numColor = "text-sky-200 font-black";
                           else numColor = "text-white font-black";
@@ -900,7 +948,7 @@
                         else if (isSaturday) numColor = "text-blue-500 font-bold";
                         let cellBgStyle = "bg-white";
                         if (!day.isCurrentMonth) cellBgStyle = "bg-slate-50/40";
-                        else if (day.isWorkout) cellBgStyle = "bg-[#1e3a8a]";
+                        else if (day.hasWorkout) cellBgStyle = "bg-[#1e3a8a]";
                         return (
                           <div key={idx} className={`min-h-[72px] p-1.5 flex flex-col justify-between ${cellBgStyle}`}>
                             <div className="flex items-center justify-between leading-none">
@@ -908,16 +956,20 @@
                                 <span className={`text-[11px] font-bold ${numColor}`}>{day.dayNum}</span>
                                 {day.holidayName && day.isCurrentMonth && (<span className="text-[8.5px] text-red-500 truncate font-semibold">{day.holidayName}</span>)}
                               </div>
-                              {day.workoutInfo && day.isCurrentMonth && (<span className="text-[10px] leading-none shrink-0" title={day.workoutInfo.label}>{day.workoutInfo.icon}</span>)}
+                              {day.hasWorkout && day.isCurrentMonth && (
+                                <div className="flex space-x-0.5">
+                                  {day.workoutParsed.types.map(t => <span key={t} className="text-[9px]">{t === 'running' ? '🏃' : '🏋️'}</span>)}
+                                </div>
+                              )}
                             </div>
                             <div className="my-auto py-1 flex items-center justify-center">
-                              {day.isCurrentMonth && (<MiniRoundShiftBadge shift={shift} isDarkBg={day.isWorkout} />)}
+                              {day.isCurrentMonth && (<MiniRoundShiftBadge shift={shift} isDarkBg={day.hasWorkout} />)}
                             </div>
                             <div className="min-h-[14px] flex flex-col justify-end space-y-0.5">
                               {day.dayEvents.slice(0, 1).map((evt) => (
-                                <div key={evt.id} className={`text-[8px] px-1 py-0.2 rounded truncate font-semibold leading-tight shadow-2xs ${day.isWorkout ? 'bg-white/95 text-slate-900' : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'}`}>{evt.title}</div>
+                                <div key={evt.id} className={`text-[8px] px-1 py-0.2 rounded truncate font-semibold leading-tight shadow-2xs ${day.hasWorkout ? 'bg-white/95 text-slate-900' : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'}`}>{evt.title}</div>
                               ))}
-                              {day.dayEvents.length > 1 && (<div className={`text-[7px] font-bold text-right leading-none ${day.isWorkout ? 'text-blue-200' : 'text-slate-400'}`}>+{day.dayEvents.length - 1}</div>)}
+                              {day.dayEvents.length > 1 && (<div className={`text-[7px] font-bold text-right leading-none ${day.hasWorkout ? 'text-blue-200' : 'text-slate-400'}`}>+{day.dayEvents.length - 1}</div>)}
                             </div>
                           </div>
                         );
@@ -930,7 +982,7 @@
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                     <div>
                       <h4 className="text-base font-black text-slate-900">{year}년 {month}월 전체 일정 목록</h4>
-                      <p className="text-[11px] text-slate-400 mt-0.5">근무 및 등록된 모든 개인 일정</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">근무, 운동 및 등록된 모든 개인 일정</p>
                     </div>
                     <button onClick={handleCopyText} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-xs active:scale-95">
                       <i className={`fa-solid ${copySuccess ? 'fa-check' : 'fa-copy'}`}></i><span>{copySuccess ? '복사 완료!' : '텍스트 복사'}</span>
@@ -947,12 +999,16 @@
                       if (shift === '주간') shiftColor = "bg-amber-400 text-slate-900 font-bold";
                       if (shift === '비번') shiftColor = "bg-rose-50 text-rose-600 border border-rose-200";
                       return (
-                        <div key={day.dateStr} className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${day.isWorkout ? 'bg-blue-50/50 border-blue-200' : 'bg-slate-50/60 border-slate-100'}`}>
+                        <div key={day.dateStr} className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${day.hasWorkout ? 'bg-blue-50/50 border-blue-200' : 'bg-slate-50/60 border-slate-100'}`}>
                           <div className="flex items-center space-x-2">
                             <span className={`font-bold w-12 ${isSunday ? 'text-red-500' : isSaturday ? 'text-blue-500' : 'text-slate-800'}`}>{month}.{String(day.dayNum).padStart(2, '0')} ({dayNames[day.dayOfWeek]})</span>
                             <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${shiftColor}`}>{shift}</span>
                             {day.holidayName && (<span className="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.2 rounded">{day.holidayName}</span>)}
-                            {day.workoutInfo && (<span className="text-[10px] font-bold text-blue-900 bg-blue-100 px-1.5 py-0.2 rounded flex items-center space-x-0.5"><span>{day.workoutInfo.icon}</span><span>{day.workoutInfo.label}</span></span>)}
+                            {day.hasWorkout && (
+                              <span className="text-[10px] font-bold text-blue-900 bg-blue-100 px-1.5 py-0.2 rounded">
+                                운동({day.workoutParsed.types.map(t => t === 'running' ? '러닝' : '크로스핏').join(', ')})
+                              </span>
+                            )}
                           </div>
                           <div className="text-right">
                             {day.dayEvents.length > 0 ? (day.dayEvents.map(e => (<span key={e.id} className="inline-block text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded ml-1">{e.title} {e.time && `(${e.time})`}</span>))) : (<span className="text-[10px] text-slate-300">-</span>)}
@@ -976,8 +1032,8 @@
       return (<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#f1f5f9" /><text x="11" y="14.5" textAnchor="middle" fill="#334155" fontSize="10.5" fontWeight="700">{shift.substring(0, 1)}</text></svg>);
     }
 
-    function QuickPreviewPopup({ dayInfo, workoutInfo, onSelectWorkout, onClose, onOpenDetail }) {
-      const { dateStr, holidayName, shiftInfo, dayEvents, dayOfWeek } = dayInfo;
+    function QuickPreviewPopup({ dayInfo, onClose, onOpenDetail }) {
+      const { dateStr, holidayName, shiftInfo, dayEvents, dayOfWeek, workoutParsed, hasWorkout } = dayInfo;
       const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dayOfWeek];
       const shift = shiftInfo.shift;
       let badgeColor = "bg-slate-800 text-white";
@@ -1000,46 +1056,90 @@
               </div>
               <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"><i className="fa-solid fa-xmark text-base"></i></button>
             </div>
-            <div>
-              <div className="text-[11px] font-bold text-slate-500 mb-1.5 flex items-center justify-between">
-                <span>오늘의 운동</span>
-                {workoutInfo && (<button onClick={() => onSelectWorkout(null)} className="text-[10px] text-rose-500 hover:underline font-semibold">기록 취소</button>)}
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => onSelectWorkout('running')} className={`py-2 px-3 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 border shadow-2xs ${workoutInfo?.type === 'running' ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] ring-2 ring-blue-400' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`}>
-                  <span>🏃</span><span>달리기 {workoutInfo?.type === 'running' && '✓'}</span>
-                </button>
-                <button type="button" onClick={() => onSelectWorkout('crossfit')} className={`py-2 px-3 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 border shadow-2xs ${workoutInfo?.type === 'crossfit' ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] ring-2 ring-blue-400' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`}>
-                  <span>🏋️</span><span>크로스핏 {workoutInfo?.type === 'crossfit' && '✓'}</span>
-                </button>
-              </div>
+            
+            {/* 운동 상세 미리보기 영역 */}
+            <div className="space-y-1.5">
+              <div className="text-xs font-bold text-slate-500">운동 기록</div>
+              {hasWorkout ? (
+                <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl p-2.5 space-y-1 text-xs">
+                  {workoutParsed.types.includes('running') && (
+                    <div className="text-indigo-950 flex items-center justify-between">
+                      <span className="font-bold">🏃 러닝</span>
+                      <span className="text-[11px] text-indigo-700 font-semibold">
+                        {workoutParsed.details.runningTime || '-'} / {workoutParsed.details.distance || '-'}
+                      </span>
+                    </div>
+                  )}
+                  {workoutParsed.types.includes('crossfit') && (
+                    <div className="text-indigo-950 space-y-0.5">
+                      <div className="font-bold">🏋️ 크로스핏</div>
+                      <div className="text-[11px] text-indigo-800 bg-white/80 p-1 rounded border border-indigo-100">
+                        {workoutParsed.details.wod || '와드 기록 없음'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-[11px] text-slate-400 text-center py-2 bg-slate-50 rounded-xl border border-dashed">등록된 운동이 없습니다.</div>
+              )}
             </div>
-            <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+
+            <div className="space-y-2 max-h-36 overflow-y-auto custom-scrollbar">
               <div className="text-xs font-bold text-slate-500">등록된 일정 ({dayEvents.length})</div>
               {dayEvents.length > 0 ? (
                 dayEvents.map((evt) => (
-                  <div key={evt.id} className="p-2.5 bg-emerald-50/80 border border-emerald-200/80 rounded-xl space-y-0.5">
-                    <div className="font-bold text-xs text-emerald-950 flex items-center justify-between"><span>{evt.title}</span>{evt.time && <span className="text-[10px] bg-white px-1.5 py-0.5 rounded text-emerald-700 font-bold border">{evt.time}</span>}</div>
+                  <div key={evt.id} className="p-2 bg-emerald-50/80 border border-emerald-200/80 rounded-xl space-y-0.5 text-xs">
+                    <div className="font-bold text-emerald-950 flex items-center justify-between"><span>{evt.title}</span>{evt.time && <span className="text-[10px] bg-white px-1.5 py-0.5 rounded text-emerald-700 font-bold border">{evt.time}</span>}</div>
                     {evt.note && <div className="text-[11px] text-emerald-800/80 leading-tight">{evt.note}</div>}
                   </div>
                 ))
-              ) : (<p className="text-xs text-slate-400 text-center py-4 bg-slate-50 rounded-xl border border-dashed">등록된 일정이 없습니다.</p>)}
+              ) : (<p className="text-[11px] text-slate-400 text-center py-2 bg-slate-50 rounded-xl border border-dashed">등록된 일정이 없습니다.</p>)}
             </div>
             <button onClick={onOpenDetail} className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center space-x-1.5">
-              <i className="fa-solid fa-pen-to-square text-[11px]"></i><span>일정 등록 / 상세 수정</span>
+              <i className="fa-solid fa-pen-to-square text-[11px]"></i><span>운동 및 일정 상세 수정</span>
             </button>
           </div>
         </div>
       );
     }
 
-    function DateDetailModal({ dateStr, workoutInfo, onSelectWorkout, onClose, settings, overrideShift, onSetOverride, events, onAddEvent, onDeleteEvent }) {
+    function DateDetailModal({ dateStr, workoutParsed, onSaveWorkout, onClose, settings, overrideShift, onSetOverride, events, onAddEvent, onDeleteEvent }) {
       const autoCalculated = calculateAutoShift(dateStr, settings);
       const currentShift = overrideShift || autoCalculated.shift;
       const isManual = !!overrideShift;
+
+      const [selectedTypes, setSelectedTypes] = useState(workoutParsed.types || []);
+      const [runningTime, setRunningTime] = useState(workoutParsed.details.runningTime || '');
+      const [distance, setDistance] = useState(workoutParsed.details.distance || '');
+      const [wod, setWod] = useState(workoutParsed.details.wod || '');
+
       const [title, setTitle] = useState('');
       const [time, setTime] = useState('');
       const [note, setNote] = useState('');
+
+      const toggleWorkoutType = (type) => {
+        let next;
+        if (selectedTypes.includes(type)) {
+          next = selectedTypes.filter(t => t !== type);
+        } else {
+          next = [...selectedTypes, type];
+        }
+        setSelectedTypes(next);
+        onSaveWorkout(next, { runningTime, distance, wod });
+      };
+
+      const handleDetailChange = (field, val) => {
+        if (field === 'runningTime') setRunningTime(val);
+        if (field === 'distance') setDistance(val);
+        if (field === 'wod') setWod(val);
+
+        const newDetails = {
+          runningTime: field === 'runningTime' ? val : runningTime,
+          distance: field === 'distance' ? val : distance,
+          wod: field === 'wod' ? val : wod,
+        };
+        onSaveWorkout(selectedTypes, newDetails);
+      };
 
       const handleAddEventSubmit = (e) => {
         e.preventDefault();
@@ -1061,25 +1161,58 @@
                   <h3 className="text-base sm:text-lg font-bold">{dateStr} ({dayOfWeekKorean})</h3>
                   {holidayName && (<span className="bg-red-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">{holidayName}</span>)}
                 </div>
-                <p className="text-[11px] text-slate-300 mt-0.5">근무 수정, 운동 종류 선택 및 일정 관리</p>
+                <p className="text-[11px] text-slate-300 mt-0.5">근무 수정, 다중 운동 및 상세 기록 관리</p>
               </div>
               <button onClick={onClose} className="p-1.5 hover:bg-slate-800 rounded-xl text-slate-300 hover:text-white transition"><i className="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <div className="p-4 sm:p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+              
+              {/* 운동 선택 및 상세 입력 영역 */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">오늘의 운동 기록</label>
-                  {workoutInfo && (<button onClick={() => onSelectWorkout(null)} className="text-[11px] text-rose-500 hover:underline font-semibold">기록 취소</button>)}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => onSelectWorkout('running')} className={`p-2.5 rounded-2xl border transition flex items-center space-x-2.5 ${workoutInfo?.type === 'running' ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm ring-2 ring-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
-                    <span className="text-2xl">🏃</span><div className="text-left"><div className="font-bold text-xs">달리기</div><div className={`text-[10px] ${workoutInfo?.type === 'running' ? 'text-blue-200' : 'text-slate-400'}`}>{workoutInfo?.type === 'running' ? '선택 완료됨' : '러닝 기록'}</div></div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">운동 기록 (중복 선택 가능)</label>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <button type="button" onClick={() => toggleWorkoutType('running')} className={`p-2.5 rounded-2xl border transition flex items-center space-x-2.5 ${selectedTypes.includes('running') ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm ring-2 ring-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
+                    <span className="text-2xl">🏃</span>
+                    <div className="text-left">
+                      <div className="font-bold text-xs">달리기</div>
+                      <div className={`text-[10px] ${selectedTypes.includes('running') ? 'text-blue-200' : 'text-slate-400'}`}>{selectedTypes.includes('running') ? '선택됨' : '선택하기'}</div>
+                    </div>
                   </button>
-                  <button type="button" onClick={() => onSelectWorkout('crossfit')} className={`p-2.5 rounded-2xl border transition flex items-center space-x-2.5 ${workoutInfo?.type === 'crossfit' ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm ring-2 ring-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
-                    <span className="text-2xl">🏋️</span><div className="text-left"><div className="font-bold text-xs">크로스핏</div><div className={`text-[10px] ${workoutInfo?.type === 'crossfit' ? 'text-blue-200' : 'text-slate-400'}`}>{workoutInfo?.type === 'crossfit' ? '선택 완료됨' : '역도/와드 기록'}</div></div>
+                  <button type="button" onClick={() => toggleWorkoutType('crossfit')} className={`p-2.5 rounded-2xl border transition flex items-center space-x-2.5 ${selectedTypes.includes('crossfit') ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm ring-2 ring-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
+                    <span className="text-2xl">🏋️</span>
+                    <div className="text-left">
+                      <div className="font-bold text-xs">크로스핏</div>
+                      <div className={`text-[10px] ${selectedTypes.includes('crossfit') ? 'text-blue-200' : 'text-slate-400'}`}>{selectedTypes.includes('crossfit') ? '선택됨' : '선택하기'}</div>
+                    </div>
                   </button>
                 </div>
+
+                {/* 달리기 세부 입력 */}
+                {selectedTypes.includes('running') && (
+                  <div className="bg-blue-50/70 p-3 rounded-2xl border border-blue-100 space-y-2 mb-2">
+                    <div className="text-xs font-bold text-blue-900 flex items-center space-x-1"><span>🏃 러닝 세부 기록</span></div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">러닝 시간</label>
+                        <input type="text" placeholder="예: 32분 10초" value={runningTime} onChange={(e) => handleDetailChange('runningTime', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">러닝 거리</label>
+                        <input type="text" placeholder="예: 5.2 km" value={distance} onChange={(e) => handleDetailChange('distance', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 크로스핏 세부 입력 */}
+                {selectedTypes.includes('crossfit') && (
+                  <div className="bg-indigo-50/70 p-3 rounded-2xl border border-indigo-100 space-y-2">
+                    <div className="text-xs font-bold text-indigo-900 flex items-center space-x-1"><span>🏋️ 크로스핏 와드 및 기록</span></div>
+                    <textarea placeholder="와드 내용 및 기록을 적어주세요 (예: Fran 4:12 RX'd)" value={wod} onChange={(e) => handleDetailChange('wod', e.target.value)} rows="2" className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-medium resize-none"></textarea>
+                  </div>
+                )}
               </div>
+
               <hr className="border-slate-100" />
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">오늘의 근무 설정</label>
