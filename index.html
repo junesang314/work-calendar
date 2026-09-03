@@ -664,7 +664,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.9</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.5.0</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -751,7 +751,7 @@
 
       return (
         <div onClick={onClose} className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div onClick={(e) => e.stopPropagation()} className="bg-slate-900 text-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-800 p-5 space-y-4 max-h-[85vh] overflow-y-auto custom-scrollbar">
+          <div onClick={(e) => e.stopPropagation()} className="bg-slate-900 text-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-800 p-5 space-y-4 max-h-[85vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div>
                 <div className="flex items-center space-x-2">
@@ -766,54 +766,54 @@
             <div className="space-y-3">
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">운동 선택 (중복 가능)</label>
               <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => toggleWorkoutType('running')} className={`p-2.5 rounded-2xl border transition flex items-center space-x-2 ${selectedTypes.includes('running') ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm ring-2 ring-indigo-400/50' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}>
-                  <span className="text-xl">🏃</span>
+                <button type="button" onClick={() => toggleWorkoutType('running')} className={`p-3 rounded-2xl border transition flex items-center space-x-2.5 ${selectedTypes.includes('running') ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm ring-2 ring-indigo-400/50' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}>
+                  <span className="text-2xl">🏃</span>
                   <div className="text-left">
                     <div className="font-bold text-xs">달리기</div>
-                    <div className="text-[9px] opacity-80">{selectedTypes.includes('running') ? '선택됨' : '선택하기'}</div>
+                    <div className="text-[10px] opacity-80">{selectedTypes.includes('running') ? '선택됨' : '선택하기'}</div>
                   </div>
                 </button>
-                <button type="button" onClick={() => toggleWorkoutType('crossfit')} className={`p-2.5 rounded-2xl border transition flex items-center space-x-2 ${selectedTypes.includes('crossfit') ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm ring-2 ring-indigo-400/50' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}>
-                  <span className="text-xl">🏋️</span>
+                <button type="button" onClick={() => toggleWorkoutType('crossfit')} className={`p-3 rounded-2xl border transition flex items-center space-x-2.5 ${selectedTypes.includes('crossfit') ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm ring-2 ring-indigo-400/50' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}>
+                  <span className="text-2xl">🏋️</span>
                   <div className="text-left">
                     <div className="font-bold text-xs">크로스핏</div>
-                    <div className="text-[9px] opacity-80">{selectedTypes.includes('crossfit') ? '선택됨' : '선택하기'}</div>
+                    <div className="text-[10px] opacity-80">{selectedTypes.includes('crossfit') ? '선택됨' : '선택하기'}</div>
                   </div>
                 </button>
               </div>
 
               {selectedTypes.includes('running') && (
-                <div className="bg-slate-800/80 p-3 rounded-2xl border border-slate-700 space-y-2">
+                <div className="bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700 space-y-2">
                   <div className="text-xs font-bold text-indigo-300">🏃 러닝 세부 기록</div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="block text-[10px] text-slate-400 mb-0.5">러닝 시간</label>
-                      <input type="text" placeholder="예: 32분 10초" value={runningTime} onChange={(e) => handleDetailChange('runningTime', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:ring-2 focus:ring-indigo-500" />
+                      <input type="text" placeholder="예: 32분 10초" value={runningTime} onChange={(e) => handleDetailChange('runningTime', e.target.value)} className="w-full px-2.5 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white outline-none focus:ring-2 focus:ring-indigo-500" />
                     </div>
                     <div>
                       <label className="block text-[10px] text-slate-400 mb-0.5">러닝 거리</label>
-                      <input type="text" placeholder="예: 5.2 km" value={distance} onChange={(e) => handleDetailChange('distance', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:ring-2 focus:ring-indigo-500" />
+                      <input type="text" placeholder="예: 5.2 km" value={distance} onChange={(e) => handleDetailChange('distance', e.target.value)} className="w-full px-2.5 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white outline-none focus:ring-2 focus:ring-indigo-500" />
                     </div>
                   </div>
                 </div>
               )}
 
               {selectedTypes.includes('crossfit') && (
-                <div className="bg-slate-800/80 p-3 rounded-2xl border border-slate-700 space-y-2">
+                <div className="bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700 space-y-2">
                   <div className="text-xs font-bold text-indigo-300">🏋️ 크로스핏 와드 및 기록</div>
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-0.5">와드 내용 (여러 줄 입력)</label>
-                    <textarea placeholder="예: Fran&#10;21-15-9..." value={wod} onChange={(e) => handleDetailChange('wod', e.target.value)} rows="4" className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:ring-2 focus:ring-indigo-500 resize-y"></textarea>
+                    <label className="block text-[10px] text-slate-400 mb-0.5">와드 내용 (여러 줄 입력 가능)</label>
+                    <textarea placeholder="예: Fran&#10;21-15-9..." value={wod} onChange={(e) => handleDetailChange('wod', e.target.value)} rows="5" className="w-full px-2.5 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white outline-none focus:ring-2 focus:ring-indigo-500 resize-y"></textarea>
                   </div>
                   <div>
                     <label className="block text-[10px] text-slate-400 mb-0.5">기록 (타임/라운드)</label>
-                    <input type="text" placeholder="예: 4분 12초 RX'd" value={record} onChange={(e) => handleDetailChange('record', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input type="text" placeholder="예: 4분 12초 RX'd" value={record} onChange={(e) => handleDetailChange('record', e.target.value)} className="w-full px-2.5 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white outline-none focus:ring-2 focus:ring-indigo-500" />
                   </div>
                 </div>
               )}
             </div>
 
-            <button onClick={onClose} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-sm">
+            <button onClick={onClose} className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-sm">
               확인 및 저장
             </button>
           </div>
@@ -1266,6 +1266,13 @@
           </div>
         </div>
       );
+    }
+
+    function MiniRoundShiftBadge({ shift, isDarkBg }) {
+      if (shift === '당직') return (<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#2563eb" stroke={isDarkBg ? "#60a5fa" : "none"} strokeWidth="1" /><text x="11" y="14.5" textAnchor="middle" fill="#ffffff" fontSize="10.5" fontWeight="700">당</text></svg>);
+      if (shift === '주간') return (<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#fbbf24" /><text x="11" y="14.5" textAnchor="middle" fill="#0f172a" fontSize="10.5" fontWeight="700">주</text></svg>);
+      if (shift === '비번') return (<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill={isDarkBg ? "#ffe4e6" : "#fff1f2"} stroke={isDarkBg ? "#f43f5e" : "#fecdd3"} strokeWidth="1" /><text x="11" y="14.5" textAnchor="middle" fill={isDarkBg ? "#9f1239" : "#e11d48"} fontSize="10.5" fontWeight="700">비</text></svg>);
+      return (<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#f1f5f9" /><text x="11" y="14.5" textAnchor="middle" fill="#334155" fontSize="10.5" fontWeight="700">{shift.substring(0, 1)}</text></svg>);
     }
 
     function SettingsModal({ settings, onSave, onClose }) {
