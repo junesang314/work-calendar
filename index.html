@@ -402,28 +402,28 @@
         if (viewMode === 'monthly') {
           const days = getMonthlyDays(targetDate);
           return (
-            <div className={`rounded-2xl shadow-sm border overflow-hidden transition-colors ${isWorkoutMode ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
-              <div className={`grid grid-cols-7 border-b text-center font-semibold text-xs py-2.5 ${isWorkoutMode ? 'bg-slate-900 text-slate-400 border-slate-800' : 'bg-slate-50/70 text-slate-600 border-slate-200'}`}>
-                <div className="text-red-400">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="text-blue-400">토</div>
+            <div className="rounded-2xl shadow-sm border overflow-hidden transition-colors bg-white border-slate-200">
+              <div className="grid grid-cols-7 border-b text-center font-semibold text-xs py-2.5 bg-slate-50/70 text-slate-600 border-slate-200">
+                <div className="text-red-500">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="text-blue-500">토</div>
               </div>
-              <div className={`grid grid-cols-7 auto-rows-fr divide-x divide-y ${isWorkoutMode ? 'divide-slate-800' : 'divide-slate-100'}`}>
+              <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100">
                 {days.map((day, idx) => {
                   const isSunday = day.dayOfWeek === 0;
                   const isSaturday = day.dayOfWeek === 6;
                   const isHoliday = !!day.holidayName;
-                  let dateNumColor = isWorkoutMode ? "text-slate-200" : "text-slate-800";
-                  if (!day.isCurrentMonth) dateNumColor = isWorkoutMode ? "text-slate-700" : "text-slate-300";
+                  let dateNumColor = "text-slate-800";
+                  if (!day.isCurrentMonth) dateNumColor = "text-slate-300";
                   else if (day.hasWorkout) {
-                    if (isSunday || isHoliday) dateNumColor = "text-rose-300 font-black";
-                    else if (isSaturday) dateNumColor = "text-sky-300 font-black";
+                    if (isSunday || isHoliday) dateNumColor = "text-blue-200 font-black";
+                    else if (isSaturday) dateNumColor = "text-blue-200 font-black";
                     else dateNumColor = "text-white font-black";
-                  } else if (isSunday || isHoliday) dateNumColor = "text-red-400 font-bold";
-                  else if (isSaturday) dateNumColor = "text-blue-400 font-bold";
+                  } else if (isSunday || isHoliday) dateNumColor = "text-red-500 font-bold";
+                  else if (isSaturday) dateNumColor = "text-blue-500 font-bold";
 
-                  // [Step 1 반영] 운동 모드일 때 운동한 칸의 배경색을 인디고(bg-indigo-950)로 변경
-                  let cellBgStyle = isWorkoutMode ? 'bg-slate-900/80' : 'bg-white';
-                  if (!day.isCurrentMonth) cellBgStyle = isWorkoutMode ? "bg-slate-950/40" : "bg-slate-50/40";
-                  else if (day.hasWorkout) cellBgStyle = isWorkoutMode ? "bg-indigo-950 border-indigo-900 shadow-xs" : "bg-[#1e3a8a] border-[#254ea3] shadow-xs";
+                  // [Step 1 수정] 운동한 칸의 배경색을 많이 옅은 네이비 (bg-blue-900/40)로 적용
+                  let cellBgStyle = 'bg-white';
+                  if (!day.isCurrentMonth) cellBgStyle = "bg-slate-50/40";
+                  else if (day.hasWorkout) cellBgStyle = "bg-blue-900/40 border-blue-300/40 shadow-xs";
 
                   return (
                     <div
@@ -433,20 +433,20 @@
                       onMouseDown={() => handleCellTouchStart(day)}
                       onMouseUp={handleCellTouchEnd}
                       onClick={() => handleCellClick(day)}
-                      className={`min-h-[100px] sm:min-h-[115px] p-1.5 transition cursor-pointer flex flex-col justify-between group hover:brightness-110 active:scale-[0.99] ${cellBgStyle} ${day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""}`}
+                      className={`min-h-[100px] sm:min-h-[115px] p-1.5 transition cursor-pointer flex flex-col justify-between group hover:brightness-95 active:scale-[0.99] ${cellBgStyle} ${day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""}`}
                     >
                       <div>
                         <div className="flex items-center justify-between leading-none">
                           <div className="flex items-center space-x-1 truncate">
                             <span className={`text-xs sm:text-sm ${dateNumColor}`}>{day.dayNum}</span>
                             {day.holidayName && day.isCurrentMonth && (
-                              <span className={`text-[9.5px] font-semibold truncate ${day.hasWorkout ? 'text-rose-200 font-bold' : 'text-red-400'}`}>{day.holidayName}</span>
+                              <span className={`text-[9.5px] font-semibold truncate ${day.hasWorkout ? 'text-blue-200 font-bold' : 'text-red-500'}`}>{day.holidayName}</span>
                             )}
                           </div>
                           {day.hasWorkout && day.isCurrentMonth && (
                             <div className="flex items-center space-x-0.5 shrink-0">
                               {day.workoutParsed.types.map(t => (
-                                <span key={t} className={`text-[10px] rounded-md px-1 py-0.2 font-bold shadow-xs border ${isWorkoutMode ? 'bg-indigo-900 text-indigo-200 border-indigo-700/50' : 'bg-[#142862] text-white border-blue-300/40'}`} title={t === 'running' ? '달리기' : '크로스핏'}>
+                                <span key={t} className="text-[10px] rounded-md px-1 py-0.2 font-bold shadow-xs border bg-blue-800 text-white border-blue-300/40" title={t === 'running' ? '달리기' : '크로스핏'}>
                                   {t === 'running' ? '🏃' : '🏋️'}
                                 </span>
                               ))}
@@ -508,7 +508,7 @@
                   else if (shift === '비번') { shiftBoxStyle = "bg-rose-100/80 border-rose-200"; shiftLabelStyle = "text-rose-900 font-bold"; }
 
                   return (
-                    <div key={idx} className={`bg-white rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden ${day.hasWorkout ? "ring-2 ring-[#1e3a8a] border-[#1e3a8a] bg-blue-50/40" : ""} ${day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"}`}>
+                    <div key={idx} className={`bg-white rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden ${day.hasWorkout ? "ring-2 ring-blue-900 border-blue-900 bg-blue-50/40" : ""} ${day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"}`}>
                       <div className={`p-2.5 border-b flex items-center justify-between ${headerBg}`}>
                         <div>
                           <div className="text-[11px] font-semibold opacity-90">{dayNames[day.dayOfWeek]}</div>
@@ -518,7 +518,7 @@
                           {day.hasWorkout && (
                             <div className="flex items-center space-x-1">
                               {day.workoutParsed.types.map(t => (
-                                <span key={t} className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#1e3a8a] text-white shadow-xs">
+                                <span key={t} className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-900 text-white shadow-xs">
                                   {t === 'running' ? '🏃 러닝' : '🏋️ 크로스핏'}
                                 </span>
                               ))}
@@ -589,27 +589,27 @@
 
       return (
         <div className="max-w-6xl mx-auto px-2 sm:px-4 py-3 sm:py-5">
-          <div className={`rounded-2xl shadow-sm border p-3.5 sm:p-5 mb-2.5 transition-colors ${isWorkoutMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3.5 sm:p-5 mb-2.5">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex items-center space-x-3">
-                <div onClick={toggleYearlyView} className={`p-2 rounded-xl cursor-pointer transition active:scale-95 ${isWorkoutMode ? 'bg-slate-800 text-blue-400 hover:bg-slate-700' : 'bg-blue-50 hover:bg-blue-100 text-blue-600'}`} title="터치하여 12달 선택">
+                <div onClick={toggleYearlyView} className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl cursor-pointer transition active:scale-95" title="터치하여 12달 선택">
                   <i className="fa-solid fa-calendar-days text-lg"></i>
                 </div>
                 <div className="flex items-center space-x-3">
                   <div onTouchStart={handleHeaderTouchStart} onTouchEnd={handleHeaderTouchEnd} onMouseDown={handleHeaderTouchStart} onMouseUp={handleHeaderTouchEnd} onClick={handleHeaderClick} className="cursor-pointer group flex items-center space-x-1.5 hover:opacity-80 transition select-none" title="터치: 12달 보기 / 길게 누르기: 캡처 및 이미지 저장">
-                    <h1 className={`text-lg sm:text-2xl font-bold tracking-tight ${isWorkoutMode ? 'text-white' : 'text-slate-800'}`}>
+                    <h1 className="text-lg sm:text-2xl font-bold text-slate-800 tracking-tight">
                       {viewMode === 'yearly' ? `${currDate.getFullYear()}년` : viewMode === 'monthly' ? `${currDate.getFullYear()}년 ${currDate.getMonth() + 1}월` : weekRangeText}
                     </h1>
                   </div>
-                  <button onClick={goToday} className={`px-3 py-1 text-xs font-semibold rounded-lg transition active:scale-95 shadow-2xs ${isWorkoutMode ? 'bg-slate-800 text-blue-400 hover:bg-slate-700' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}>오늘</button>
+                  <button onClick={goToday} className="px-3 py-1 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition active:scale-95 shadow-2xs">오늘</button>
                 </div>
               </div>
-              <div className={`flex items-center justify-between md:justify-end space-x-2 border-t md:border-t-0 pt-2.5 md:pt-0 ${isWorkoutMode ? 'border-slate-800' : 'border-slate-100'}`}>
-                <div className={`p-1 rounded-xl flex items-center text-xs font-bold ${isWorkoutMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
-                  <button onClick={() => { setViewMode('monthly'); setDragX(0); }} className={`px-3 py-1.5 rounded-lg transition ${viewMode === 'monthly' ? (isWorkoutMode ? 'bg-slate-900 text-blue-400 shadow-sm' : 'bg-white text-blue-600 shadow-sm') : (isWorkoutMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800')}`}>
+              <div className="flex items-center justify-between md:justify-end space-x-2 border-t md:border-t-0 pt-2.5 md:pt-0 border-slate-100">
+                <div className="bg-slate-100 p-1 rounded-xl flex items-center text-xs font-bold">
+                  <button onClick={() => { setViewMode('monthly'); setDragX(0); }} className={`px-3 py-1.5 rounded-lg transition ${viewMode === 'monthly' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
                     <i className="fa-regular fa-calendar-days mr-1.5"></i>월간
                   </button>
-                  <button onClick={() => { setViewMode('weekly'); setDragX(0); }} className={`px-3 py-1.5 rounded-lg transition ${viewMode === 'weekly' ? (isWorkoutMode ? 'bg-slate-900 text-blue-400 shadow-sm' : 'bg-white text-blue-600 shadow-sm') : (isWorkoutMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800')}`}>
+                  <button onClick={() => { setViewMode('weekly'); setDragX(0); }} className={`px-3 py-1.5 rounded-lg transition ${viewMode === 'weekly' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
                     <i className="fa-solid fa-list-check mr-1.5"></i>위클리
                   </button>
                 </div>
@@ -617,19 +617,19 @@
                   <button onClick={() => setIsAuthModalOpen(true)} className={`flex items-center space-x-1 px-3 py-2 text-xs font-bold rounded-xl transition shadow-sm active:scale-95 ${user ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
                     <i className="fa-solid fa-user"></i><span>{user ? `계정(${user})` : '로그인'}</span>
                   </button>
-                  <button onClick={() => setIsSettingsOpen(true)} className={`flex items-center space-x-1.5 px-3 py-2 text-xs font-medium rounded-xl transition shadow-sm active:scale-95 ${isWorkoutMode ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-slate-800 hover:bg-slate-900 text-white'}`}>
+                  <button onClick={() => setIsSettingsOpen(true)} className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium rounded-xl transition shadow-sm active:scale-95">
                     <i className="fa-solid fa-gear"></i><span className="hidden sm:inline">패턴 설정</span>
                   </button>
                 </div>
               </div>
             </div>
             {viewMode === 'monthly' && (
-              <div className={`mt-2 pt-2 border-t flex items-center space-x-2 text-xs font-semibold overflow-x-auto ${isWorkoutMode ? 'border-slate-800 text-slate-300' : 'border-slate-100 text-slate-600'}`}>
+              <div className="mt-2 pt-2 border-t border-slate-100 flex items-center space-x-2 text-xs font-semibold overflow-x-auto">
                 <span className="text-slate-400 font-normal mr-1">이번달 근무:</span>
-                <div className={`flex items-center space-x-1 px-2.5 py-0.5 rounded-full border ${isWorkoutMode ? 'bg-slate-800 text-blue-300 border-slate-700' : 'bg-blue-50 text-blue-700 border-blue-100'}`}><span className="w-2 h-2 rounded-full bg-blue-500"></span><span>당직 {monthSummary.당직}</span></div>
-                <div className={`flex items-center space-x-1 px-2.5 py-0.5 rounded-full border ${isWorkoutMode ? 'bg-slate-800 text-amber-300 border-slate-700' : 'bg-amber-50 text-amber-800 border-amber-100'}`}><span className="w-2 h-2 rounded-full bg-amber-400"></span><span>주간 {monthSummary.주간}</span></div>
-                <div className={`flex items-center space-x-1 px-2.5 py-0.5 rounded-full border ${isWorkoutMode ? 'bg-slate-800 text-rose-300 border-slate-700' : 'bg-rose-50 text-rose-700 border-rose-100'}`}><span className="w-2 h-2 rounded-full bg-rose-500"></span><span>비번 {monthSummary.비번}</span></div>
-                {monthSummary.연차 > 0 && (<div className={`flex items-center space-x-1 px-2.5 py-0.5 rounded-full border ${isWorkoutMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'}`}><span className="w-2 h-2 rounded-full bg-slate-500"></span><span>연차 {monthSummary.연차}</span></div>)}
+                <div className="flex items-center space-x-1 bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-100"><span className="w-2 h-2 rounded-full bg-blue-600"></span><span>당직 {monthSummary.당직}</span></div>
+                <div className="flex items-center space-x-1 bg-amber-50 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-100"><span className="w-2 h-2 rounded-full bg-amber-400"></span><span>주간 {monthSummary.주간}</span></div>
+                <div className="flex items-center space-x-1 bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full border border-rose-100"><span className="w-2 h-2 rounded-full bg-rose-500"></span><span>비번 {monthSummary.비번}</span></div>
+                {monthSummary.연차 > 0 && (<div className="flex items-center space-x-1 bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full border border-slate-200"><span className="w-2 h-2 rounded-full bg-slate-500"></span><span>연차 {monthSummary.연차}</span></div>)}
               </div>
             )}
           </div>
@@ -642,21 +642,21 @@
             </div>
           </div>
 
-          <div onClick={() => setIsWorkoutMode(!isWorkoutMode)} className={`mt-2 rounded-2xl p-2.5 sm:p-3 shadow-sm border flex flex-col sm:flex-row items-center justify-between gap-2 select-none cursor-pointer transition-all ${isWorkoutMode ? 'bg-slate-900 text-white border-slate-800 ring-2 ring-indigo-500/50' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+          <div onClick={() => setIsWorkoutMode(!isWorkoutMode)} className={`mt-2 rounded-2xl p-2.5 sm:p-3 shadow-sm border flex flex-col sm:flex-row items-center justify-between gap-2 select-none cursor-pointer transition-all ${isWorkoutMode ? 'bg-blue-900 text-white border-blue-950 ring-2 ring-blue-400/50' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
             <div className="flex items-center space-x-2.5 w-full sm:w-auto">
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm shadow-xs shrink-0 ${isWorkoutMode ? 'bg-indigo-600 text-white' : 'bg-[#1e3a8a] text-white'}`}>💪</div>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm shadow-xs shrink-0 ${isWorkoutMode ? 'bg-blue-800 text-white' : 'bg-[#1e3a8a] text-white'}`}>💪</div>
               <div>
-                <div className={`text-xs font-bold flex items-center space-x-1.5 ${isWorkoutMode ? 'text-indigo-200' : 'text-slate-800'}`}>
+                <div className={`text-xs font-bold flex items-center space-x-1.5 ${isWorkoutMode ? 'text-blue-100' : 'text-slate-800'}`}>
                   <span>이번 달 운동 통계 {isWorkoutMode ? '(운동 모드 켜짐 ✨)' : ''}</span>
-                  <span className={`text-[10px] px-2 py-0.2 rounded-full font-bold ${isWorkoutMode ? 'bg-indigo-950 text-indigo-300' : 'text-blue-600 bg-blue-50'}`}>Total {monthSummary.총운동}회</span>
+                  <span className={`text-[10px] px-2 py-0.2 rounded-full font-bold ${isWorkoutMode ? 'bg-blue-800 text-blue-200' : 'text-blue-600 bg-blue-50'}`}>Total {monthSummary.총운동}회</span>
                 </div>
-                <div className={`text-[10px] ${isWorkoutMode ? 'text-slate-400' : 'text-slate-400'}`}>누르면 {isWorkoutMode ? '기본 근무 모드로 전환' : '운동 중심 월간 모드로 전환'}</div>
+                <div className={`text-[10px] ${isWorkoutMode ? 'text-blue-200' : 'text-slate-400'}`}>누르면 {isWorkoutMode ? '기본 근무 모드로 전환' : '운동 중심 월간 모드로 전환'}</div>
               </div>
             </div>
             <div className="flex items-center space-x-1.5 w-full sm:w-auto whitespace-nowrap">
-              <div className={`flex items-center space-x-1 px-2 py-1.5 rounded-xl border text-xs font-bold flex-1 sm:flex-none justify-center ${isWorkoutMode ? 'bg-slate-800 text-indigo-200 border-slate-700' : 'bg-blue-50/80 text-blue-900 border-blue-100'}`}><span>🏃 달리기</span><span className={`font-extrabold text-sm pl-0.5 ${isWorkoutMode ? 'text-white' : 'text-blue-600'}`}>{monthSummary.달리기}</span></div>
-              <div className={`flex items-center space-x-1 px-2 py-1.5 rounded-xl border text-xs font-bold flex-[1.4] sm:flex-none justify-center ${isWorkoutMode ? 'bg-slate-800 text-indigo-200 border-slate-700' : 'bg-indigo-50/80 text-indigo-900 border-indigo-100'}`}><span>🏋️ 크로스핏</span><span className={`font-extrabold text-sm pl-0.5 ${isWorkoutMode ? 'text-white' : 'text-indigo-600'}`}>{monthSummary.크로스핏}</span></div>
-              <div className={`flex items-center space-x-1 px-2 py-1.5 rounded-xl text-xs font-bold shadow-xs flex-1 sm:flex-none justify-center ${isWorkoutMode ? 'bg-indigo-950 text-indigo-200' : 'bg-[#1e3a8a] text-white'}`}><span>총 운동</span><span className={`font-black text-sm pl-0.5 ${isWorkoutMode ? 'text-white' : 'text-blue-200'}`}>{monthSummary.총운동}</span></div>
+              <div className={`flex items-center space-x-1 px-2 py-1.5 rounded-xl border text-xs font-bold flex-1 sm:flex-none justify-center ${isWorkoutMode ? 'bg-blue-800/80 text-blue-100 border-blue-700' : 'bg-blue-50/80 text-blue-900 border-blue-100'}`}><span>🏃 달리기</span><span className={`font-extrabold text-sm pl-0.5 ${isWorkoutMode ? 'text-blue-200' : 'text-blue-600'}`}>{monthSummary.달리기}</span></div>
+              <div className={`flex items-center space-x-1 px-2 py-1.5 rounded-xl border text-xs font-bold flex-[1.4] sm:flex-none justify-center ${isWorkoutMode ? 'bg-blue-800/80 text-blue-100 border-blue-700' : 'bg-indigo-50/80 text-indigo-900 border-indigo-100'}`}><span>🏋️ 크로스핏</span><span className={`font-extrabold text-sm pl-0.5 ${isWorkoutMode ? 'text-blue-200' : 'text-indigo-600'}`}>{monthSummary.크로스핏}</span></div>
+              <div className={`flex items-center space-x-1 px-2 py-1.5 rounded-xl text-xs font-bold shadow-xs flex-1 sm:flex-none justify-center ${isWorkoutMode ? 'bg-blue-950 text-blue-100' : 'bg-[#1e3a8a] text-white'}`}><span>총 운동</span><span className={`font-black text-sm pl-0.5 ${isWorkoutMode ? 'text-blue-200' : 'text-blue-200'}`}>{monthSummary.총운동}</span></div>
             </div>
           </div>
 
