@@ -664,7 +664,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.5</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.6</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -762,7 +762,7 @@
               </div>
               <button onClick={onClose} className="p-1.5 hover:bg-blue-900 rounded-xl text-blue-200 hover:text-white transition"><i className="fa-solid fa-xmark text-lg"></i></button>
             </div>
-            <div className="p-4 sm:p-5 space-y-4">
+            <div className="p-4 sm:p-5 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">운동 선택 (중복 선택 가능)</label>
                 <div className="grid grid-cols-2 gap-2 mb-3">
@@ -802,12 +802,12 @@
                   <div className="bg-indigo-50/70 p-3 rounded-2xl border border-indigo-100 space-y-2">
                     <div className="text-xs font-bold text-indigo-900 flex items-center space-x-1"><span>🏋️ 크로스핏 와드 및 기록</span></div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-600 mb-0.5">와드 내용</label>
-                      <input type="text" placeholder="예: Fran" value={wod} onChange={(e) => handleDetailChange('wod', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium mb-2" />
+                      <label className="block text-[10px] font-bold text-slate-600 mb-0.5">와드 내용 (여러 줄 입력 가능)</label>
+                      <textarea placeholder="예: 3 Rounds for time:&#10;400m Run&#10;21 Kettlebell Swings" value={wod} onChange={(e) => handleDetailChange('wod', e.target.value)} rows="4" className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium mb-2 resize-y"></textarea>
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-600 mb-0.5">기록 (타임/라운드 등)</label>
-                      <input type="text" placeholder="예: 4분 12초 RX'd" value={record} onChange={(e) => handleDetailChange('record', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium" />
+                      <input type="text" placeholder="예: 12분 45초 RX'd" value={record} onChange={(e) => handleDetailChange('record', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium" />
                     </div>
                   </div>
                 )}
@@ -1190,7 +1190,7 @@
                         <span>🏋️ 크로스핏</span>
                       </div>
                       <div className="text-[11px] text-blue-900 bg-white/90 p-1.5 rounded border border-blue-100 space-y-0.5">
-                        {workoutParsed.details.wod && <div className="font-semibold whitespace-pre-wrap">와드: {workoutParsed.details.wod}</div>}
+                        {workoutParsed.details.wod && <div className="font-semibold whitespace-pre-wrap">와드:\n{workoutParsed.details.wod}</div>}
                         {workoutParsed.details.record && <div className="text-blue-700 whitespace-pre-wrap">기록: {workoutParsed.details.record}</div>}
                         {!workoutParsed.details.wod && !workoutParsed.details.record && <div className="text-slate-400">상세 기록 없음</div>}
                       </div>
