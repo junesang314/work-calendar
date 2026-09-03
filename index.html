@@ -1,375 +1,1157 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>근무표 및 운동 관리 캘린더</title>
-    <style>
-        :root {
-            --bg-color: #f4f6f9;
-            --card-bg: #ffffff;
-            --text-color: #333333;
-            --border-color: #e0e0e0;
-            --primary-color: #007bff;
-            --popup-bg: #ffffff;
-            --popup-text: #333333;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>스케줄 근무 및 일정 관리</title>
 
-        body.dark-mode {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-color: #e0e0e0;
-            --border-color: #333333;
-            --primary-color: #bb86fc;
-            --popup-bg: #2d2d2d;
-            --popup-text: #ffffff;
-        }
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="shortcut icon" href="icon.png">
+  <meta name="apple-mobile-web-app-title" content="근무표">
 
-        body {
-            font-family: 'Apple SD Gothic Neo', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: var(--card-bg);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            background-color: var(--primary-color);
-            color: #fff;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        button:hover {
-            opacity: 0.9;
-        }
-
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
-        }
-
-        .day-header {
-            text-align: center;
-            font-weight: bold;
-            padding: 8px 0;
-            font-size: 0.9rem;
-        }
-
-        .day-cell {
-            aspect-ratio: 1;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 6px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            cursor: pointer;
-            position: relative;
-            user-select: none;
-        }
-
-        .day-cell:hover {
-            border-color: var(--primary-color);
-        }
-
-        .date-number {
-            font-size: 0.9rem;
-            font-weight: bold;
-        }
-
-        .cell-content {
-            font-size: 0.75rem;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-        }
-
-        /* 팝업 스타일 */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .modal-content {
-            background-color: var(--popup-bg);
-            color: var(--popup-text);
-            padding: 24px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 450px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-        }
-
-        .modal-content h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-        }
-
-        .form-group {
-            margin-bottom: 14px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.85rem;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        .form-group input, .form-group textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid var(--border-color);
-            background-color: var(--card-bg);
-            color: var(--text-color);
-            border-radius: 6px;
-            box-sizing: border-box;
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            height: 70px;
-        }
-
-        .workout-toggle-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 12px;
-        }
-
-        .workout-toggle-group button {
-            flex: 1;
-            background-color: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-        }
-
-        .workout-toggle-group button.active {
-            background-color: var(--primary-color);
-            color: #fff;
-            border-color: var(--primary-color);
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-top: 20px;
-        }
-    </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; touch-action: manipulation; }
+    .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  </style>
 </head>
-<body>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen pb-16 sm:pb-6 select-none overflow-x-hidden">
+  <div id="root"></div>
 
-    <div class="container">
-        <header>
-            <h2 id="current-month-title">2026년 9월</h2>
-            <div>
-                <button id="mode-toggle-btn" onclick="toggleMode()">운동 모드 (다크)</button>
-            </div>
-        </header>
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
 
-        <div class="calendar-grid" id="calendar-header">
-            <div class="day-header" style="color: red;">일</div>
-            <div class="day-header">월</div>
-            <div class="day-header">화</div>
-            <div class="day-header">수</div>
-            <div class="day-header">목</div>
-            <div class="day-header">금</div>
-            <div class="day-header" style="color: blue;">토</div>
-        </div>
+    const SUPABASE_URL = 'https://vpwfnoqrmcerddtyatst.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_XcbXQlPwLWWwKwL-lZ6hnw_WvR2j_zQ';
+    
+    const getSupabase = () => {
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
+        return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+      return null;
+    };
+
+    const HOLIDAYS_DATA = {
+      "01-01": "신정", "03-01": "삼일절", "05-05": "어린이날", "06-06": "현충일", "08-15": "광복절", "10-03": "개천절", "10-09": "한글날", "12-25": "성탄절",
+      "2024-02-09": "설날 연휴", "2024-02-10": "설날", "2024-02-11": "설날 연휴", "2024-02-12": "대체공휴일", "2024-05-15": "부처님오신날", "2024-09-16": "추석 연휴", "2024-09-17": "추석", "2024-09-18": "추석 연휴",
+      "2025-01-28": "설날 연휴", "2025-01-29": "설날", "2025-01-30": "설날 연휴", "2025-05-05": "부처님오신날", "2025-05-06": "대체공휴일", "2025-10-05": "추석 연휴", "2025-10-06": "추석", "2025-10-07": "추석 연휴", "2025-10-08": "대체공휴일",
+      "2026-02-16": "설날 연휴", "2026-02-17": "설날", "2026-02-18": "설날 연휴", "2026-05-24": "부처님오신날", "2026-05-25": "대체공휴일", "2026-09-24": "추석 연휴", "2026-09-25": "추석", "2026-09-26": "추석 연휴",
+      "2027-02-06": "설날 연휴", "2027-02-07": "설날", "2027-02-08": "설날 연휴", "2027-02-09": "대체공휴일", "2027-05-13": "부처님오신날", "2027-09-14": "추석 연휴", "2027-09-15": "추석", "2027-09-16": "추석 연휴"
+    };
+
+    function getHolidayName(dateStr) {
+      if (!dateStr) return null;
+      if (HOLIDAYS_DATA[dateStr]) return HOLIDAYS_DATA[dateStr];
+      const mmdd = dateStr.substring(5);
+      if (HOLIDAYS_DATA[mmdd]) return HOLIDAYS_DATA[mmdd];
+      return null;
+    }
+
+    const SHIFT_TYPES = ['주간', '당직', '비번'];
+
+    function calculateAutoShift(dateStr, settings) {
+      if (!dateStr) return { shift: '당직', isRuleModified: false, originalShift: '당직' };
+      const anchor = new Date(settings.anchorDate + 'T00:00:00');
+      const target = new Date(dateStr + 'T00:00:00');
+      const diffDays = Math.round((target - anchor) / (1000 * 60 * 60 * 24));
+      const anchorIdx = SHIFT_TYPES.indexOf(settings.anchorShift);
+      let rawIdx = (anchorIdx + diffDays) % 3;
+      if (rawIdx < 0) rawIdx = (rawIdx + 3) % 3;
+      const rawShift = SHIFT_TYPES[rawIdx];
+      const dayOfWeek = target.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const holidayName = getHolidayName(dateStr);
+      const isHoliday = !!holidayName;
+
+      if (rawShift === '주간' && (isWeekend || isHoliday)) {
+        return { shift: '비번', isRuleModified: true, originalShift: '주간', reason: isWeekend ? '주말 휴일' : holidayName };
+      }
+      return { shift: rawShift, isRuleModified: false, originalShift: rawShift };
+    }
+
+    function parseWorkout(val) {
+      if (!val) return { types: [], details: {} };
+      if (typeof val === 'string') {
+        if (val === 'crossfit' || val === '크로스핏') return { types: ['crossfit'], details: {} };
+        if (val === 'running' || val === '달리기') return { types: ['running'], details: {} };
+        return { types: [], details: {} };
+      }
+      return { types: val.types || [], details: val.details || {} };
+    }
+
+    function App() {
+      const today = new Date();
+      const [viewMode, setViewMode] = useState('monthly');
+      const [isWorkoutMode, setIsWorkoutMode] = useState(false);
+      const [currentDate, setCurrentDate] = useState(new Date());
+      const [user, setUser] = useState(() => localStorage.getItem('shift_app_custom_user') || null);
+      const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+      const [dragX, setDragX] = useState(0);
+      const [isDragging, setIsDragging] = useState(false);
+      const [isAnimating, setIsAnimating] = useState(false);
+      const pendingDirectionRef = useRef(0);
+      const touchStartRef = useRef({ x: 0, y: 0, time: 0 });
+      const containerRef = useRef(null);
+
+      const [previewDayInfo, setPreviewDayInfo] = useState(null);
+      const longPressTimerRef = useRef(null);
+      const isLongPressedRef = useRef(false);
+
+      const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+      const headerLongPressTimerRef = useRef(null);
+      const isHeaderLongPressedRef = useRef(false);
+
+      const handleHeaderTouchStart = () => {
+        isHeaderLongPressedRef.current = false;
+        headerLongPressTimerRef.current = setTimeout(() => {
+          isHeaderLongPressedRef.current = true;
+          setIsShareModalOpen(true);
+          if (navigator.vibrate) navigator.vibrate(40);
+        }, 500);
+      };
+
+      const handleHeaderTouchEnd = () => {
+        if (headerLongPressTimerRef.current) {
+          clearTimeout(headerLongPressTimerRef.current);
+          headerLongPressTimerRef.current = null;
+        }
+      };
+
+      const handleHeaderClick = () => {
+        if (isHeaderLongPressedRef.current) {
+          isHeaderLongPressedRef.current = false;
+          return;
+        }
+        toggleYearlyView();
+      };
+
+      const [settings, setSettings] = useState(() => {
+        const saved = localStorage.getItem('shift_app_settings');
+        return saved ? JSON.parse(saved) : { anchorDate: '2026-09-01', anchorShift: '당직' };
+      });
+
+      const [overrides, setOverrides] = useState(() => {
+        const saved = localStorage.getItem('shift_app_overrides');
+        return saved ? JSON.parse(saved) : {};
+      });
+
+      const [events, setEvents] = useState(() => {
+        const saved = localStorage.getItem('shift_app_events');
+        return saved ? JSON.parse(saved) : {};
+      });
+
+      const [workouts, setWorkouts] = useState(() => {
+        const saved = localStorage.getItem('shift_app_workouts');
+        return saved ? JSON.parse(saved) : {};
+      });
+
+      const [dataLoaded, setDataLoaded] = useState(false);
+      const [selectedDateStr, setSelectedDateStr] = useState(null);
+      const [quickWorkoutModalDay, setQuickWorkoutModalDay] = useState(null);
+      const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+      useEffect(() => {
+        const client = getSupabase();
+        if (user && client) {
+          fetchUserData(user, client);
+        } else {
+          setDataLoaded(true);
+        }
+      }, [user]);
+
+      const fetchUserData = async (username, client) => {
+        try {
+          const { data } = await client.from('user_schedules').select('*').eq('user_id', username).single();
+          if (data) {
+            if (data.settings) setSettings(data.settings);
+            if (data.overrides) setOverrides(data.overrides);
+            if (data.events) setEvents(data.events);
+            if (data.workouts) setWorkouts(data.workouts);
+          } else {
+            await saveUserData(username, settings, overrides, events, workouts, client);
+          }
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setDataLoaded(true);
+        }
+      };
+
+      const saveUserData = async (username, newSettings, newOverrides, newEvents, newWorkouts, explicitClient) => {
+        const client = explicitClient || getSupabase();
+        if (!username || !client) return;
+        try {
+          await client.from('user_schedules').upsert({
+            user_id: username, settings: newSettings, overrides: newOverrides, events: newEvents, workouts: newWorkouts, updated_at: new Date()
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      useEffect(() => {
+        if (!dataLoaded) return;
+        const client = getSupabase();
+        if (user && client) {
+          saveUserData(user, settings, overrides, events, workouts, client);
+        }
+        localStorage.setItem('shift_app_settings', JSON.stringify(settings));
+        localStorage.setItem('shift_app_overrides', JSON.stringify(overrides));
+        localStorage.setItem('shift_app_events', JSON.stringify(events));
+        localStorage.setItem('shift_app_workouts', JSON.stringify(workouts));
+      }, [settings, overrides, events, workouts, user, dataLoaded]);
+
+      const updateWorkoutData = (dateStr, newTypes, newDetails) => {
+        if (!dateStr) return;
+        setWorkouts(prev => {
+          const next = { ...prev };
+          if (newTypes.length === 0) {
+            delete next[dateStr];
+          } else {
+            next[dateStr] = { types: newTypes, details: newDetails };
+          }
+          return next;
+        });
+      };
+
+      const getRelativeDate = (baseDate, offset) => {
+        const d = new Date(baseDate);
+        if (viewMode === 'yearly') d.setFullYear(d.getFullYear() + offset);
+        else if (viewMode === 'monthly') d.setMonth(d.getMonth() + offset);
+        else if (viewMode === 'weekly') d.setDate(d.getDate() + (offset * 7));
+        return d;
+      };
+
+      const prevDate = useMemo(() => getRelativeDate(currentDate, -1), [currentDate, viewMode]);
+      const currDate = currentDate;
+      const nextDate = useMemo(() => getRelativeDate(currentDate, 1), [currentDate, viewMode]);
+
+      const goToday = () => { setCurrentDate(new Date()); setDragX(0); };
+
+      const handleTouchStart = (e) => {
+        if (isAnimating) return;
+        touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
+        setIsDragging(true); setIsAnimating(false);
+      };
+
+      const handleTouchMove = (e) => {
+        if (!isDragging) return;
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const deltaX = currentX - touchStartRef.current.x;
+        const deltaY = currentY - touchStartRef.current.y;
+        if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) {
+          if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+        }
+        if (Math.abs(deltaX) > Math.abs(deltaY)) setDragX(deltaX);
+      };
+
+      const handleTouchEnd = () => {
+        if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+        if (!isDragging) return;
+        setIsDragging(false);
+        const duration = Date.now() - touchStartRef.current.time;
+        const velocity = Math.abs(dragX) / duration;
+        const containerWidth = containerRef.current ? containerRef.current.clientWidth : window.innerWidth;
+        if (dragX < -60 || (dragX < -25 && velocity > 0.25)) {
+          pendingDirectionRef.current = -1; setIsAnimating(true); setDragX(-containerWidth);
+        } else if (dragX > 60 || (dragX > 25 && velocity > 0.25)) {
+          pendingDirectionRef.current = 1; setIsAnimating(true); setDragX(containerWidth);
+        } else {
+          pendingDirectionRef.current = 0; setIsAnimating(true); setDragX(0);
+        }
+      };
+
+      const handleTransitionEnd = () => {
+        if (!isAnimating) return;
+        const dir = pendingDirectionRef.current;
+        if (dir !== 0) setCurrentDate(prev => getRelativeDate(prev, dir === -1 ? 1 : -1));
+        setIsAnimating(false); setDragX(0); pendingDirectionRef.current = 0;
+      };
+
+      const handleCellTouchStart = (day) => {
+        isLongPressedRef.current = false;
+        longPressTimerRef.current = setTimeout(() => {
+          isLongPressedRef.current = true;
+          setPreviewDayInfo(day);
+          if (navigator.vibrate) navigator.vibrate(40);
+        }, 450);
+      };
+
+      const handleCellTouchEnd = () => {
+        if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+      };
+
+      const handleCellClick = (day) => {
+        if (isLongPressedRef.current) { isLongPressedRef.current = false; return; }
+        if (isWorkoutMode) {
+          if (day && day.dateStr) setQuickWorkoutModalDay(day);
+        } else {
+          if (day && day.dateStr) setSelectedDateStr(day.dateStr);
+        }
+      };
+
+      const getDayInfo = (d) => {
+        const yearStr = d.getFullYear();
+        const monthStr = String(d.getMonth() + 1).padStart(2, '0');
+        const dayStr = String(d.getDate()).padStart(2, '0');
+        const dateStr = `${yearStr}-${monthStr}-${dayStr}`;
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const isToday = dateStr === todayStr;
+        const dayOfWeek = d.getDay();
+        const holidayName = getHolidayName(dateStr);
         
-        <div class="calendar-grid" id="calendar-body" style="margin-top: 8px;">
-            </div>
-    </div>
+        const workoutParsed = parseWorkout(workouts[dateStr]);
+        const hasWorkout = workoutParsed.types.length > 0;
 
-    <div class="modal-overlay" id="detail-modal">
-        <div class="modal-content">
-            <h3 id="modal-date-title">날짜 상세 정보</h3>
-            
-            <div class="form-group">
-                <label>근무 정보</label>
-                <input type="text" id="input-shift" placeholder="예: 주간, 야간, 휴무">
-            </div>
-
-            <div class="form-group">
-                <label>개인 일정</label>
-                <input type="text" id="input-schedule" placeholder="개인 일정을 입력하세요">
-            </div>
-
-            <div class="form-group">
-                <label>운동 선택</label>
-                <div class="workout-toggle-group">
-                    <button type="button" id="btn-crossfit" onclick="selectWorkoutType('crossfit')">크로스핏</button>
-                    <button type="button" id="btn-running" onclick="selectWorkoutType('running')">러닝</button>
-                </div>
-            </div>
-
-            <div class="form-group" id="workout-detail-group">
-                <label id="workout-label-title">운동 상세 (와드 / 기록 / 거리)</label>
-                <textarea id="input-workout-detail" placeholder="크로스핏 와드 및 기록, 혹은 러닝 시간/거리를 넉넉하게 입력하세요..."></textarea>
-            </div>
-
-            <div class="modal-actions">
-                <button type="button" style="background-color: #6c757d;" onclick="closeModal()">취소</button>
-                <button type="button" onclick="saveData()">저장</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let isDarkMode = false;
-        let currentSelectedDate = null;
-        let selectedWorkout = 'none'; // 'crossfit', 'running', 'none'
-        let calendarData = {}; // 날짜별 데이터를 저장할 객체
-
-        function toggleMode() {
-            isDarkMode = !isDarkMode;
-            document.body.classList.toggle('dark-mode', isDarkMode);
-            const btn = document.getElementById('mode-toggle-btn');
-            btn.textContent = isDarkMode ? '근무 모드 (라이트)' : '운동 모드 (다크)';
+        let shiftInfo;
+        if (overrides[dateStr]) {
+          shiftInfo = { shift: overrides[dateStr], isOverride: true, isRuleModified: false };
+        } else {
+          const auto = calculateAutoShift(dateStr, settings);
+          shiftInfo = { shift: auto.shift, isOverride: false, isRuleModified: auto.isRuleModified, reason: auto.reason };
         }
+        return { 
+          dateObj: new Date(d), 
+          dateStr, 
+          dayNum: d.getDate(), 
+          dayOfWeek, 
+          isToday, 
+          holidayName, 
+          shiftInfo, 
+          workoutParsed, 
+          hasWorkout, 
+          dayEvents: events[dateStr] || [] 
+        };
+      };
 
-        function selectWorkoutType(type) {
-            if (selectedWorkout === type) {
-                selectedWorkout = 'none';
-            } else {
-                selectedWorkout = type;
+      const getMonthlyDays = (targetDate) => {
+        const y = targetDate.getFullYear();
+        const m = targetDate.getMonth();
+        const firstDay = new Date(y, m, 1);
+        const lastDay = new Date(y, m + 1, 0);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - startDate.getDay());
+        const totalCellsNeeded = (lastDay.getDate() + firstDay.getDay() > 35) ? 42 : 35;
+        const days = [];
+        let curr = new Date(startDate);
+        for (let i = 0; i < totalCellsNeeded; i++) {
+          const info = getDayInfo(curr);
+          info.isCurrentMonth = curr.getMonth() === m;
+          days.push(info);
+          curr.setDate(curr.getDate() + 1);
+        }
+        return days;
+      };
+
+      const getWeeklyDays = (targetDate) => {
+        const startOfWeek = new Date(targetDate);
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+        const days = [];
+        let curr = new Date(startOfWeek);
+        for (let i = 0; i < 7; i++) {
+          const info = getDayInfo(curr);
+          info.isCurrentMonth = true;
+          days.push(info);
+          curr.setDate(curr.getDate() + 1);
+        }
+        return days;
+      };
+
+      const currMonthlyDays = useMemo(() => getMonthlyDays(currDate), [currDate, settings, overrides, events, workouts]);
+
+      const monthSummary = useMemo(() => {
+        const summary = { 당직: 0, 주간: 0, 비번: 0, 연차: 0, 달리기: 0, 크로스핏: 0, 총운동: 0 };
+        currMonthlyDays.forEach(day => {
+          if (day.isCurrentMonth) {
+            const s = day.shiftInfo.shift;
+            if (summary[s] !== undefined) summary[s]++;
+            if (day.hasWorkout) {
+              summary.총운동++;
+              if (day.workoutParsed.types.includes('crossfit')) summary.크로스핏++;
+              if (day.workoutParsed.types.includes('running')) summary.달리기++;
             }
-            updateWorkoutButtonUI();
-        }
+          }
+        });
+        return summary;
+      }, [currMonthlyDays]);
 
-        function updateWorkoutButtonUI() {
-            const cfBtn = document.getElementById('btn-crossfit');
-            const runBtn = document.getElementById('btn-running');
-            
-            cfBtn.classList.remove('active');
-            runBtn.classList.remove('active');
+      const weekRangeText = useMemo(() => {
+        const days = getWeeklyDays(currDate);
+        if (days.length === 0) return '';
+        const start = days[0].dateStr;
+        const end = days[6].dateStr;
+        return `${start.replace(/-/g, '.')} ~ ${end.substring(5).replace(/-/g, '.')}`;
+      }, [currDate, settings, overrides, events, workouts]);
 
-            if (selectedWorkout === 'crossfit') cfBtn.classList.add('active');
-            if (selectedWorkout === 'running') runBtn.classList.add('active');
-        }
+      const toggleYearlyView = () => { setViewMode(prev => (prev === 'yearly' ? 'monthly' : 'yearly')); setDragX(0); };
 
-        function renderCalendar() {
-            const body = document.getElementById('calendar-body');
-            body.innerHTML = '';
+      const renderViewContent = (targetDate) => {
+        if (viewMode === 'monthly') {
+          const days = getMonthlyDays(targetDate);
+          return (
+            <div className="rounded-2xl shadow-sm border overflow-hidden transition-colors bg-white border-slate-200">
+              <div className="grid grid-cols-7 border-b text-center font-semibold text-xs py-2.5 bg-slate-50/70 text-slate-600 border-slate-200">
+                <div className="text-red-500">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="text-blue-500">토</div>
+              </div>
+              <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100">
+                {days.map((day, idx) => {
+                  const isSunday = day.dayOfWeek === 0;
+                  const isSaturday = day.dayOfWeek === 6;
+                  const isHoliday = !!day.holidayName;
+                  let dateNumColor = "text-slate-800";
+                  if (!day.isCurrentMonth) dateNumColor = "text-slate-300";
+                  else if (day.hasWorkout) {
+                    if (isSunday || isHoliday) dateNumColor = "text-rose-200 font-black";
+                    else if (isSaturday) dateNumColor = "text-sky-200 font-black";
+                    else dateNumColor = "text-white font-black";
+                  } else if (isSunday || isHoliday) dateNumColor = "text-red-500 font-bold";
+                  else if (isSaturday) dateNumColor = "text-blue-500 font-bold";
 
-            // 2026년 9월 기준 예시 (9월 1일 화요일 시작, 총 30일)
-            const totalDays = 30;
-            const startDay = 2; // 화요일 (일:0, 월:1, 화:2 ...)
+                  let cellBgStyle = 'bg-white';
+                  if (!day.isCurrentMonth) cellBgStyle = "bg-slate-50/40";
+                  else if (day.hasWorkout) cellBgStyle = "bg-[#1e3a8a] border-[#254ea3] shadow-xs";
 
-            // 빈 칸 채우기 (전 달 공백)
-            for (let i = 0; i < startDay; i++) {
-                const emptyCell = document.createElement('div');
-                emptyCell.className = 'day-cell';
-                emptyCell.style.visibility = 'hidden';
-                body.appendChild(emptyCell);
-            }
-
-            // 날짜 생성
-            for (let day = 1; day <= totalDays; day++) {
-                const dateKey = `2026-09-${day < 10 ? '0' + day : day}`;
-                const cell = document.createElement('div');
-                cell.className = 'day-cell';
-                
-                const data = calendarData[dateKey] || {};
-                
-                cell.innerHTML = `
-                    <div class="date-number">${day}</div>
-                    <div class="cell-content">
-                        ${data.shift ? `근무: ${data.shift}<br>` : ''}
-                        ${data.workout ? `운동: ${data.workout}` : ''}
+                  return (
+                    <div
+                      key={idx}
+                      onTouchStart={() => handleCellTouchStart(day)}
+                      onTouchEnd={handleCellTouchEnd}
+                      onMouseDown={() => handleCellTouchStart(day)}
+                      onMouseUp={handleCellTouchEnd}
+                      onClick={() => handleCellClick(day)}
+                      className={`min-h-[100px] sm:min-h-[115px] p-1.5 transition cursor-pointer flex flex-col justify-between group hover:brightness-95 active:scale-[0.99] ${cellBgStyle} ${day.isToday ? "ring-2 ring-blue-500 ring-inset z-10" : ""}`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between leading-none">
+                          <div className="flex items-center space-x-1 truncate">
+                            <span className={`text-xs sm:text-sm ${dateNumColor}`}>{day.dayNum}</span>
+                            {day.holidayName && day.isCurrentMonth && (
+                              <span className={`text-[9.5px] font-semibold truncate ${day.hasWorkout ? 'text-rose-200 font-bold' : 'text-red-500'}`}>{day.holidayName}</span>
+                            )}
+                          </div>
+                          {day.hasWorkout && day.isCurrentMonth && (
+                            <div className="flex items-center space-x-0.5 shrink-0">
+                              {day.workoutParsed.types.map(t => (
+                                <span key={t} className="text-[10px] rounded-md px-1 py-0.2 font-bold shadow-xs border bg-[#142862] text-white border-blue-300/40" title={t === 'running' ? '달리기' : '크로스핏'}>
+                                  {t === 'running' ? '🏃' : '🏋️'}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="my-0.5 flex flex-col items-center justify-center">
+                        <ShiftBadge info={day.shiftInfo} isDarkBg={day.hasWorkout && day.isCurrentMonth} />
+                      </div>
+                      <div className="space-y-0.5 mt-auto max-h-[34px] overflow-hidden">
+                        {isWorkoutMode ? (
+                          null
+                        ) : (
+                          <>
+                            {day.dayEvents.slice(0, 1).map((evt) => (
+                              <div key={evt.id} className={`text-[9px] px-1.5 py-0.5 rounded truncate font-semibold flex items-center justify-between shadow-2xs border ${day.hasWorkout ? "bg-white/95 text-slate-900 border-blue-200" : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200/80"}`}>
+                                <span className="truncate">{evt.title}</span>
+                                {evt.time && <span className={`text-[8px] pl-1 shrink-0 font-bold ${day.hasWorkout ? 'text-blue-800' : 'text-emerald-700'}`}>{evt.time}</span>}
+                              </div>
+                            ))}
+                            {day.dayEvents.length > 1 && (
+                              <div className={`text-[7.5px] text-right font-bold leading-none ${day.hasWorkout ? 'text-blue-200' : 'text-slate-400'}`}>
+                                +{day.dayEvents.length - 1}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
-                `;
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
 
-                // 롱프레스 구현 (모바일/PC 공통 대응을 위한 터치/마우스 이벤트 조합)
-                let pressTimer;
-                
-                const handlePressStart = () => {
-                    pressTimer = setTimeout(() => {
-                        openModal(dateKey);
-                    }, 500); // 0.5초 이상 누를 시 팝업 오픈
-                };
+        if (viewMode === 'weekly') {
+          const days = getWeeklyDays(targetDate);
+          return (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-7 gap-2.5">
+                {days.map((day, idx) => {
+                  const isSunday = day.dayOfWeek === 0;
+                  const isSaturday = day.dayOfWeek === 6;
+                  const isHoliday = !!day.holidayName;
+                  const dayNames = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+                  let headerBg = "bg-slate-50 text-slate-700";
+                  let dateNumColor = "text-slate-800";
+                  if (day.isToday) { headerBg = "bg-blue-600 text-white"; dateNumColor = "text-white"; }
+                  else if (isSunday || isHoliday) dateNumColor = "text-red-500";
+                  else if (isSaturday) dateNumColor = "text-blue-500";
 
-                const handlePressEnd = () => {
-                    clearTimeout(pressTimer);
-                };
+                  const shift = day.shiftInfo.shift;
+                  let shiftBoxStyle = "bg-white border-slate-200";
+                  let shiftLabelStyle = "text-slate-600 font-medium";
+                  if (shift === '주간') { shiftBoxStyle = "bg-amber-100/90 border-amber-300"; shiftLabelStyle = "text-amber-950 font-bold"; }
+                  else if (shift === '당직') { shiftBoxStyle = "bg-blue-100/90 border-blue-300"; shiftLabelStyle = "text-blue-950 font-bold"; }
+                  else if (shift === '비번') { shiftBoxStyle = "bg-rose-100/80 border-rose-200"; shiftLabelStyle = "text-rose-900 font-bold"; }
 
-                cell.addEventListener('mousedown', handlePressStart);
-                cell.addEventListener('mouseup', handlePressEnd);
-                cell.addEventListener('mouseleave', handlePressEnd);
-                
-                cell.addEventListener('touchstart', handlePressStart);
-                cell.addEventListener('touchend', handlePressEnd);
+                  return (
+                    <div key={idx} className={`bg-white rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden ${day.hasWorkout ? "ring-2 ring-[#1e3a8a] border-[#1e3a8a] bg-blue-50/40" : ""} ${day.isToday ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200"}`}>
+                      <div className={`p-2.5 border-b flex items-center justify-between ${headerBg}`}>
+                        <div>
+                          <div className="text-[11px] font-semibold opacity-90">{dayNames[day.dayOfWeek]}</div>
+                          <div className={`text-base font-bold leading-none ${dateNumColor}`}>{day.dateStr.substring(5).replace('-', '.')}</div>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                          {day.hasWorkout && (
+                            <div className="flex items-center space-x-1">
+                              {day.workoutParsed.types.map(t => (
+                                <span key={t} className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#1e3a8a] text-white shadow-xs">
+                                  {t === 'running' ? '🏃 러닝' : '🏋️ 크로스핏'}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {day.holidayName && (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${day.isToday ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600'}`}>{day.holidayName}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="p-2.5 flex-1 flex flex-col justify-between space-y-2.5">
+                        <div className={`flex items-center justify-between p-2 rounded-xl border transition ${shiftBoxStyle}`}>
+                          <span className={`text-xs ${shiftLabelStyle}`}>오늘의 근무</span>
+                          <ShiftBadge info={day.shiftInfo} />
+                        </div>
+                        <div className="space-y-1 flex-1 min-h-[70px]">
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">일정 ({day.dayEvents.length})</div>
+                          {day.dayEvents.length > 0 ? (
+                            day.dayEvents.map((evt) => (
+                              <div key={evt.id} className="text-[11px] bg-emerald-50 hover:bg-emerald-100 text-emerald-900 p-1.5 rounded-lg border border-emerald-200/80 space-y-0.5 shadow-2xs">
+                                <div className="font-bold flex items-center justify-between">
+                                  <span>{evt.title}</span>
+                                  {evt.time && <span className="text-[9px] text-emerald-700 font-bold bg-white/80 px-1 py-0.2 rounded border border-emerald-200/60">{evt.time}</span>}
+                                </div>
+                                {evt.note && <div className="text-[9.5px] text-emerald-700/80 leading-tight">{evt.note}</div>}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-[10px] text-slate-300 text-center py-4">일정 없음</div>
+                          )}
+                        </div>
+                        <button onClick={() => setSelectedDateStr(day.dateStr)} className="w-full py-1 text-xs font-medium text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center justify-center space-x-1">
+                          <i className="fa-solid fa-pen text-[10px]"></i><span>일정/운동/근무 상세 수정</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
 
-                body.appendChild(cell);
+        if (viewMode === 'yearly') {
+          const y = targetDate.getFullYear();
+          return (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5">
+              <div className="text-center mb-3">
+                <h2 className="text-base sm:text-lg font-bold text-slate-800">{y}년 전체 달력 선택</h2>
+                <p className="text-xs text-slate-400">원하는 월을 터치하여 해당 달로 이동하세요.</p>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
+                {Array.from({ length: 12 }, (_, i) => i).map((m) => {
+                  const isCurrentSelected = currDate.getFullYear() === y && currDate.getMonth() === m;
+                  const isThisMonth = today.getFullYear() === y && today.getMonth() === m;
+                  return (
+                    <button key={m} onClick={() => { const newDate = new Date(targetDate); newDate.setMonth(m); setCurrentDate(newDate); setViewMode('monthly'); setDragX(0); }} className={`p-3 sm:p-4 rounded-2xl border transition flex flex-col items-center justify-center space-y-0.5 relative active:scale-95 ${isCurrentSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105' : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200'}`}>
+                      <span className="text-base sm:text-lg font-black">{m + 1}월</span>
+                      {isThisMonth && (<span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${isCurrentSelected ? 'bg-white text-blue-600' : 'bg-blue-100 text-blue-700'}`}>이번달</span>)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
+      };
+
+      return (
+        <div className="max-w-6xl mx-auto px-2 sm:px-4 py-3 sm:py-5">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3.5 sm:p-5 mb-2.5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-center space-x-3">
+                <div onClick={toggleYearlyView} className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl cursor-pointer transition active:scale-95" title="터치하여 12달 선택">
+                  <i className="fa-solid fa-calendar-days text-lg"></i>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div onTouchStart={handleHeaderTouchStart} onTouchEnd={handleHeaderTouchEnd} onMouseDown={handleHeaderTouchStart} onMouseUp={handleHeaderTouchEnd} onClick={handleHeaderClick} className="cursor-pointer group flex items-center space-x-1.5 hover:opacity-80 transition select-none" title="터치: 12달 보기 / 길게 누르기: 캡처 및 이미지 저장">
+                    <h1 className="text-lg sm:text-2xl font-bold text-slate-800 tracking-tight">
+                      {viewMode === 'yearly' ? `${currDate.getFullYear()}년` : viewMode === 'monthly' ? `${currDate.getFullYear()}년 ${currDate.getMonth() + 1}월` : weekRangeText}
+                    </h1>
+                  </div>
+                  <button onClick={goToday} className="px-3 py-1 text-xs font-semibold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition active:scale-95 shadow-2xs">오늘</button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between md:justify-end space-x-2 border-t md:border-t-0 pt-2.5 md:pt-0 border-slate-100">
+                <div className="bg-slate-100 p-1 rounded-xl flex items-center text-xs font-bold">
+                  <button onClick={() => { setViewMode('monthly'); setDragX(0); }} className={`px-3 py-1.5 rounded-lg transition ${viewMode === 'monthly' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+                    <i className="fa-regular fa-calendar-days mr-1.5"></i>월간
+                  </button>
+                  <button onClick={() => { setViewMode('weekly'); setDragX(0); }} className={`px-3 py-1.5 rounded-lg transition ${viewMode === 'weekly' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+                    <i className="fa-solid fa-list-check mr-1.5"></i>위클리
+                  </button>
+                </div>
+                <div className="flex items-center space-x-1.5">
+                  <button onClick={() => setIsAuthModalOpen(true)} className={`flex items-center space-x-1 px-3 py-2 text-xs font-bold rounded-xl transition shadow-sm active:scale-95 ${user ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+                    <i className="fa-solid fa-user"></i><span>{user ? `계정(${user})` : '로그인'}</span>
+                  </button>
+                  <button onClick={() => setIsSettingsOpen(true)} className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium rounded-xl transition shadow-sm active:scale-95">
+                    <i className="fa-solid fa-gear"></i><span className="hidden sm:inline">패턴 설정</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            {viewMode === 'monthly' && (
+              <div className="mt-2 pt-2 border-t border-slate-100 flex items-center space-x-2 text-xs font-semibold overflow-x-auto">
+                <span className="text-slate-400 font-normal mr-1">이번달 근무:</span>
+                <div className="flex items-center space-x-1 bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-100"><span className="w-2 h-2 rounded-full bg-blue-600"></span><span>당직 {monthSummary.당직}</span></div>
+                <div className="flex items-center space-x-1 bg-amber-50 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-100"><span className="w-2 h-2 rounded-full bg-amber-400"></span><span>주간 {monthSummary.주간}</span></div>
+                <div className="flex items-center space-x-1 bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full border border-rose-100"><span className="w-2 h-2 rounded-full bg-rose-500"></span><span>비번 {monthSummary.비번}</span></div>
+                {monthSummary.연차 > 0 && (<div className="flex items-center space-x-1 bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full border border-slate-200"><span className="w-2 h-2 rounded-full bg-slate-500"></span><span>연차 {monthSummary.연차}</span></div>)}
+              </div>
+            )}
+          </div>
+
+          <div ref={containerRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} className="overflow-hidden w-full relative touch-pan-y">
+            <div onTransitionEnd={handleTransitionEnd} style={{ display: 'flex', width: '300%', transform: `translateX(calc(-33.333333% + ${dragX}px))`, transition: isAnimating ? 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)' : 'none' }}>
+              <div className="w-1/3 shrink-0 px-0.5">{renderViewContent(prevDate)}</div>
+              <div className="w-1/3 shrink-0 px-0.5">{renderViewContent(currDate)}</div>
+              <div className="w-1/3 shrink-0 px-0.5">{renderViewContent(nextDate)}</div>
+            </div>
+          </div>
+
+          <div onClick={() => setIsWorkoutMode(!isWorkoutMode)} className={`mt-2 rounded-2xl p-2.5 sm:p-3 shadow-sm border flex flex-col sm:flex-row items-center justify-between gap-2 select-none cursor-pointer transition-all ${isWorkoutMode ? 'bg-indigo-900 text-white border-indigo-950 ring-2 ring-indigo-400/50' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
+            <div className="flex items-center space-x-2.5 w-full sm:w-auto">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm shadow-xs shrink-0 ${isWorkoutMode ? 'bg-indigo-700 text-white' : 'bg-[#1e3a8a] text-white'}`}>💪</div>
+              <div>
+                <div className={`text-xs font-bold flex items-center space-x-1.5 ${isWorkoutMode ? 'text-indigo-100' : 'text-slate-800'}`}>
+                  <span>이번 달 운동 통계 {isWorkoutMode ? '(운동 모드 켜짐 ✨)' : ''}</span>
+                  <span className={`text-[10px] px-2 py-0.2 rounded-full font-bold ${isWorkoutMode ? 'bg-indigo-800 text-indigo-200' : 'text-blue-600 bg-blue-50'}`}>Total {monthSummary.총운동}회</span>
+                </div>
+                <div className={`text-[10px] ${isWorkoutMode ? 'text-indigo-300' : 'text-slate-400'}`}>누르면 {isWorkoutMode ? '기본 근무 모드로 전환' : '운동 중심 월간 모드로 전환'}</div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-1.5 w-full sm:w-auto whitespace-nowrap">
+              <div className={`flex items-center space-x-1 px-2 py-1.5 rounded-xl border text-xs font-bold flex-1 sm:flex-none justify-center ${isWorkoutMode ? 'bg-indigo-800/80 text-indigo-100 border-indigo-700' : 'bg-blue-50/80 text-blue-900 border-blue-100'}`}><span>🏃 달리기</span><span className={`font-extrabold text-sm pl-0.5 ${isWorkoutMode ? 'text-indigo-200' : 'text-blue-600'}`}>{monthSummary.달리기}</span></div>
+              <div className={`flex items-center space-x-1 px-2 py-1.5 rounded-xl border text-xs font-bold flex-[1.4] sm:flex-none justify-center ${isWorkoutMode ? 'bg-indigo-800/80 text-indigo-100 border-indigo-700' : 'bg-indigo-50/80 text-indigo-900 border-indigo-100'}`}><span>🏋️ 크로스핏</span><span className={`font-extrabold text-sm pl-0.5 ${isWorkoutMode ? 'text-indigo-200' : 'text-indigo-600'}`}>{monthSummary.크로스핏}</span></div>
+              <div className={`flex items-center space-x-1 px-2 py-1.5 rounded-xl text-xs font-bold shadow-xs flex-1 sm:flex-none justify-center ${isWorkoutMode ? 'bg-indigo-950 text-indigo-100' : 'bg-[#1e3a8a] text-white'}`}><span>총 운동</span><span className={`font-black text-sm pl-0.5 ${isWorkoutMode ? 'text-indigo-200' : 'text-blue-200'}`}>{monthSummary.총운동}</span></div>
+            </div>
+          </div>
+
+          <div className="mt-2 mb-1 text-center select-none">
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.4.7</span>
+          </div>
+
+          <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
+            <button onClick={() => { setViewMode('monthly'); setDragX(0); }} className={`flex flex-col items-center space-y-1 ${viewMode === 'monthly' ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>
+              <i className="fa-regular fa-calendar-days text-base"></i><span className="text-[10px]">월간 달력</span>
+            </button>
+            <button onClick={() => { setViewMode('weekly'); setDragX(0); }} className={`flex flex-col items-center space-y-1 ${viewMode === 'weekly' ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>
+              <i className="fa-solid fa-list-check text-base"></i><span className="text-[10px]">위클리 스케줄</span>
+            </button>
+            <button onClick={() => setIsSettingsOpen(true)} className="flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-700">
+              <i className="fa-solid fa-gear text-base"></i><span className="text-[10px]">패턴 설정</span>
+            </button>
+          </div>
+
+          {previewDayInfo && (
+            <QuickPreviewPopup 
+              dayInfo={previewDayInfo} 
+              onClose={() => setPreviewDayInfo(null)} 
+              onOpenDetail={() => { const target = previewDayInfo.dateStr; setPreviewDayInfo(null); setSelectedDateStr(target); }} 
+              workoutParsed={parseWorkout(workouts[previewDayInfo.dateStr])}
+              onSaveWorkout={(types, details) => updateWorkoutData(previewDayInfo.dateStr, types, details)}
+            />
+          )}
+
+          {quickWorkoutModalDay && (
+            <WorkoutOnlyModal 
+              dateStr={quickWorkoutModalDay.dateStr} 
+              workoutParsed={parseWorkout(workouts[quickWorkoutModalDay.dateStr])} 
+              onSaveWorkout={(types, details) => updateWorkoutData(quickWorkoutModalDay.dateStr, types, details)} 
+              onClose={() => setQuickWorkoutModalDay(null)} 
+            />
+          )}
+
+          {selectedDateStr && (
+            <DateDetailModal 
+              dateStr={selectedDateStr} 
+              onClose={() => setSelectedDateStr(null)} 
+              settings={settings} 
+              overrideShift={overrides[selectedDateStr]} 
+              onSetOverride={(shift) => { if (shift === null) { const copy = { ...overrides }; delete copy[selectedDateStr]; setOverrides(copy); } else { setOverrides({ ...overrides, [selectedDateStr]: shift }); } }} 
+              events={events[selectedDateStr] || []} 
+              onAddEvent={(newEvent) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: [...list, newEvent] }); }} 
+              onDeleteEvent={(eventId) => { const list = events[selectedDateStr] || []; setEvents({ ...events, [selectedDateStr]: list.filter((e) => e.id !== eventId) }); }} 
+            />
+          )}
+
+          {isShareModalOpen && (<ShareCaptureModal currDate={currDate} monthlyDays={currMonthlyDays} monthSummary={monthSummary} onClose={() => setIsShareModalOpen(false)} />)}
+          {isSettingsOpen && (<SettingsModal settings={settings} onSave={(newSettings) => { setSettings(newSettings); setIsSettingsOpen(false); }} onClose={() => setIsSettingsOpen(false)} />)}
+          {isAuthModalOpen && (<AuthModal user={user} onLogin={(u) => { setUser(u); localStorage.setItem('shift_app_custom_user', u); setIsAuthModalOpen(false); }} onLogout={() => { setUser(null); localStorage.removeItem('shift_app_custom_user'); setIsAuthModalOpen(false); }} onClose={() => setIsAuthModalOpen(false)} />)}
+        </div>
+      );
+    }
+
+    function WorkoutOnlyModal({ dateStr, workoutParsed, onSaveWorkout, onClose }) {
+      const [selectedTypes, setSelectedTypes] = useState(workoutParsed.types || []);
+      const [runningTime, setRunningTime] = useState(workoutParsed.details.runningTime || '');
+      const [distance, setDistance] = useState(workoutParsed.details.distance || '');
+      const [wod, setWod] = useState(workoutParsed.details.wod || '');
+      const [record, setRecord] = useState(workoutParsed.details.record || '');
+
+      const toggleWorkoutType = (type) => {
+        let next;
+        if (selectedTypes.includes(type)) {
+          next = selectedTypes.filter(t => t !== type);
+        } else {
+          next = [...selectedTypes, type];
+        }
+        setSelectedTypes(next);
+        onSaveWorkout(next, { runningTime, distance, wod, record });
+      };
+
+      const handleDetailChange = (field, val) => {
+        if (field === 'runningTime') setRunningTime(val);
+        if (field === 'distance') setDistance(val);
+        if (field === 'wod') setWod(val);
+        if (field === 'record') setRecord(val);
+
+        const newDetails = {
+          runningTime: field === 'runningTime' ? val : runningTime,
+          distance: field === 'distance' ? val : distance,
+          wod: field === 'wod' ? val : wod,
+          record: field === 'record' ? val : record,
+        };
+        onSaveWorkout(selectedTypes, newDetails);
+      };
+
+      const dateObj = new Date(dateStr + 'T00:00:00');
+      const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dateObj.getDay()];
+      const holidayName = getHolidayName(dateStr);
+
+      return (
+        <div onClick={onClose} className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[100] flex items-center justify-center p-3 sm:p-4">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 flex flex-col">
+            <div className="bg-[#1e3a8a] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-base sm:text-lg font-bold">{dateStr} ({dayOfWeekKorean}) 운동 기록</h3>
+                  {holidayName && (<span className="bg-red-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">{holidayName}</span>)}
+                </div>
+                <p className="text-[11px] text-blue-200 mt-0.5">러닝 및 크로스핏 상세 기록 관리</p>
+              </div>
+              <button onClick={onClose} className="p-1.5 hover:bg-blue-900 rounded-xl text-blue-200 hover:text-white transition"><i className="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div className="p-4 sm:p-5 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">운동 선택 (중복 선택 가능)</label>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <button type="button" onClick={() => toggleWorkoutType('running')} className={`p-3 rounded-2xl border transition flex items-center space-x-2.5 ${selectedTypes.includes('running') ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm ring-2 ring-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
+                    <span className="text-2xl">🏃</span>
+                    <div className="text-left">
+                      <div className="font-bold text-xs">달리기</div>
+                      <div className={`text-[10px] ${selectedTypes.includes('running') ? 'text-blue-200' : 'text-slate-400'}`}>{selectedTypes.includes('running') ? '선택됨' : '선택하기'}</div>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => toggleWorkoutType('crossfit')} className={`p-3 rounded-2xl border transition flex items-center space-x-2.5 ${selectedTypes.includes('crossfit') ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm ring-2 ring-blue-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
+                    <span className="text-2xl">🏋️</span>
+                    <div className="text-left">
+                      <div className="font-bold text-xs">크로스핏</div>
+                      <div className={`text-[10px] ${selectedTypes.includes('crossfit') ? 'text-blue-200' : 'text-slate-400'}`}>{selectedTypes.includes('crossfit') ? '선택됨' : '선택하기'}</div>
+                    </div>
+                  </button>
+                </div>
+
+                {selectedTypes.includes('running') && (
+                  <div className="bg-blue-50/70 p-3 rounded-2xl border border-blue-100 space-y-2 mb-2">
+                    <div className="text-xs font-bold text-blue-900 flex items-center space-x-1"><span>🏃 러닝 세부 기록</span></div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">러닝 시간</label>
+                        <input type="text" placeholder="예: 32분 10초" value={runningTime} onChange={(e) => handleDetailChange('runningTime', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">러닝 거리</label>
+                        <input type="text" placeholder="예: 5.2 km" value={distance} onChange={(e) => handleDetailChange('distance', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedTypes.includes('crossfit') && (
+                  <div className="bg-indigo-50/70 p-3 rounded-2xl border border-indigo-100 space-y-2">
+                    <div className="text-xs font-bold text-indigo-900 flex items-center space-x-1"><span>🏋️ 크로스핏 와드 및 기록</span></div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 mb-0.5">와드 내용 (여러 줄 입력 가능)</label>
+                      <textarea placeholder="예: 3 Rounds for time:&#10;400m Run&#10;21 Kettlebell Swings" value={wod} onChange={(e) => handleDetailChange('wod', e.target.value)} rows="4" className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium mb-2 resize-y"></textarea>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 mb-0.5">기록 (타임/라운드 등)</label>
+                      <input type="text" placeholder="예: 12분 45초 RX'd" value={record} onChange={(e) => handleDetailChange('record', e.target.value)} className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="bg-slate-50 px-5 py-3 border-t border-slate-100 flex justify-end shrink-0">
+              <button onClick={onClose} className="px-5 py-2 bg-[#1e3a8a] text-white text-xs font-semibold rounded-xl hover:bg-blue-900 transition">확인</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function AuthModal({ user, onLogin, onLogout, onClose }) {
+      const [userIdInput, setUserIdInput] = useState('');
+      const [pinInput, setPinInput] = useState('');
+      const [message, setMessage] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      const handleDirectAuth = async (e) => {
+        e.preventDefault();
+        const client = getSupabase();
+        if (!client) {
+          setMessage('Supabase 연결을 확인해주세요.');
+          return;
+        }
+        const cleanId = userIdInput.trim();
+        if (!cleanId) {
+          setMessage('아이디를 입력해주세요.');
+          return;
+        }
+        if (!pinInput || pinInput.length < 6) {
+          setMessage('6자리 이상 숫자 PIN 번호를 입력해주세요.');
+          return;
+        }
+
+        setLoading(true);
+        setMessage('');
+
+        try {
+          const { data } = await client.from('user_schedules').select('*').eq('user_id', cleanId).single();
+
+          if (data) {
+            if (data.pin && data.pin !== pinInput) {
+              setMessage('PIN 번호가 올바르지 않습니다.');
+              setLoading(false);
+              return;
             }
-        }
+            if (!data.pin) {
+              await client.from('user_schedules').update({ pin: pinInput }).eq('user_id', cleanId);
+            }
+            onLogin(cleanId);
+          } else {
+            const { error: insertErr } = await client.from('user_schedules').insert({
+              user_id: cleanId,
+              pin: pinInput,
+              settings: JSON.parse(localStorage.getItem('shift_app_settings') || '{"anchorDate":"2026-09-01","anchorShift":"당직"}'),
+              overrides: JSON.parse(localStorage.getItem('shift_app_overrides') || '{}'),
+              events: JSON.parse(localStorage.getItem('shift_app_events') || '{}'),
+              workouts: JSON.parse(localStorage.getItem('shift_app_workouts') || '{}'),
+              updated_at: new Date()
+            });
 
-        function openModal(dateKey) {
-            currentSelectedDate = dateKey;
-            document.getElementById('modal-date-title').textContent = `${dateKey} 상세 정보`;
+            if (insertErr) {
+              setMessage(insertErr.message);
+            } else {
+              onLogin(cleanId);
+            }
+          }
+        } catch (err) {
+          setMessage('서버 통신 오류가 발생했습니다.');
+        }
+        setLoading(false);
+      };
+
+      return (
+        <div onClick={onClose} className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl shadow-xl max-w-sm w-full overflow-hidden border border-slate-100 p-5 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-base font-bold text-slate-900">{user ? '계정 관리' : '아이디 및 PIN 연동'}</h3>
+              <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            {user ? (
+              <div className="space-y-4 text-center py-2">
+                <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border">현재 연동된 아이디:<br/><strong className="text-slate-900 text-sm">{user}</strong></div>
+                <p className="text-[11px] text-emerald-600 font-semibold">✓ 클라우드 서버와 실시간 동기화 중입니다.</p>
+                <button onClick={onLogout} className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition">연동 해제 (로그아웃)</button>
+              </div>
+            ) : (
+              <form onSubmit={handleDirectAuth} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">아이디 (한글 가능)</label>
+                  <input type="text" placeholder="예: 준상" value={userIdInput} onChange={(e) => setUserIdInput(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none font-medium" required />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">PIN 번호 (6자리 이상 숫자)</label>
+                  <input 
+                    type="number" 
+                    inputMode="numeric" 
+                    pattern="[0-9]*" 
+                    placeholder="6자리 이상 숫자 PIN" 
+                    value={pinInput} 
+                    onChange={(e) => setPinInput(e.target.value)} 
+                    className="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none tracking-widest font-bold text-lg" 
+                    required 
+                  />
+                </div>
+                {message && <p className="text-[11px] text-blue-600 font-semibold text-center">{message}</p>}
+                <button type="submit" disabled={loading} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition">
+                  {loading ? '처리중...' : '시작하기 (자동 가입/로그인)'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function ShiftBadge({ info, isDarkBg }) {
+      const { shift, isOverride } = info;
+      if (shift === '당직') {
+        return (
+          <div className="relative group">
+            <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs ${isDarkBg ? 'bg-blue-500 text-white ring-1 ring-white/40' : 'bg-blue-600 text-white'}`}>당</span>
+            {isOverride && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 border border-white rounded-full" title="수동 수정됨"></span>}
+          </div>
+        );
+      }
+      if (shift === '주간') {
+        return (
+          <div className="relative group">
+            <span className="w-6 h-6 sm:w-7 sm:h-7 bg-amber-400 text-slate-900 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs">주</span>
+            {isOverride && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-blue-600 border border-white rounded-full" title="수동 수정됨"></span>}
+          </div>
+        );
+      }
+      if (shift === '비번') {
+        return (
+          <div className="relative group">
+            <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs border ${isDarkBg ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>비</span>
+            {isOverride && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 border border-white rounded-full" title="수동 수정됨"></span>}
+          </div>
+        );
+      }
+      return <span className="w-6 h-6 sm:w-7 sm:h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs">{shift.substring(0, 1)}</span>;
+    }
+
+    function QuickPreviewPopup({ dayInfo, onClose, onOpenDetail, workoutParsed, onSaveWorkout }) {
+      const { dateStr, holidayName, shiftInfo, dayEvents, dayOfWeek } = dayInfo;
+      const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dayOfWeek];
+      const shift = shiftInfo.shift;
+      let badgeColor = "bg-slate-800 text-white";
+      if (shift === '당직') badgeColor = "bg-blue-600 text-white";
+      if (shift === '주간') badgeColor = "bg-amber-400 text-slate-900";
+      if (shift === '비번') badgeColor = "bg-rose-500 text-white";
+
+      const [selectedTypes, setSelectedTypes] = useState(workoutParsed.types || []);
+
+      const toggleWorkoutType = (type) => {
+        let next;
+        if (selectedTypes.includes(type)) {
+          next = selectedTypes.filter(t => t !== type);
+        } else {
+          next = [...selectedTypes, type];
+        }
+        setSelectedTypes(next);
+        onSaveWorkout(next, workoutParsed.details || {});
+      };
+
+      return (
+        <div onClick={onClose} className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl max-w-xs w-full overflow-hidden border border-slate-100 p-4 space-y-3.5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div>
+                <div className="flex items-center space-x-1.5">
+                  <h4 className="text-base font-bold text-slate-800">{dateStr} ({dayOfWeekKorean})</h4>
+                  {holidayName && (<span className="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">{holidayName}</span>)}
+                </div>
+                <div className="text-[11px] text-slate-400 mt-0.5 flex items-center space-x-1.5">
+                  <span>근무:</span><span className={`px-2 py-0.5 rounded-md font-bold text-xs ${badgeColor}`}>{shift}</span>
+                </div>
+              </div>
+              <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"><i className="fa-solid fa-xmark text-base"></i></button>
+            </div>
             
-            const data = calendarData[dateKey] || {};
-            document.getElementById('input-shift').value = data.shift || '';
-            document.getElementById('input-schedule').value = data.schedule || '';
-            selectedWorkout = data.workoutType || 'none';
-            document.getElementById('input-workout-detail').value = data.workoutDetail || '';
-            
-            updateWorkoutButtonUI();
-            document.getElementById('detail-modal').style.display = 'flex';
-        }
+            <div className="space-y-1.5">
+              <div className="text-xs font-bold text-slate-700">빠른 운동 선택</div>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => toggleWorkoutType('running')} className={`py-2 px-2.5 rounded-xl border transition flex items-center justify-center space-x-1.5 text-xs font-bold ${selectedTypes.includes('running') ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
+                  <span>🏃</span><span>달리기</span>
+                </button>
+                <button type="button" onClick={() => toggleWorkoutType('crossfit')} className={`py-2 px-2.5 rounded-xl border transition flex items-center justify-center space-x-1.5 text-xs font-bold ${selectedTypes.includes('crossfit') ? 'bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
+                  <span>🏋️</span><span>크로스핏</span>
+                </button>
+              </div>
+            </div>
 
-        function closeModal() {
-            document.getElementById('detail-modal').style.display = 'none';
-        }
+            <div className="space-y-2 max-h-36 overflow-y-auto custom-scrollbar">
+              <div className="text-xs font-bold text-slate-500">등록된 일정 ({dayEvents.length})</div>
+              {dayEvents.length > 0 ? (
+                dayEvents.map((evt) => (
+                  <div key={evt.id} className="p-2 bg-emerald-50/80 border border-emerald-200/80 rounded-xl space-y-0.5 text-xs">
+                    <div className="font-bold text-emerald-950 flex items-center justify-between"><span>{evt.title}</span>{evt.time && <span className="text-[10px] bg-white px-1.5 py-0.5 rounded text-emerald-700 font-bold border">{evt.time}</span>}</div>
+                    {evt.note && <div className="text-[11px] text-emerald-800/80 leading-tight">{evt.note}</div>}
+                  </div>
+                ))
+              ) : (<p className="text-[11px] text-slate-400 text-center py-2 bg-slate-50 rounded-xl border border-dashed">등록된 일정이 없습니다.</p>)}
+            </div>
+            <button onClick={onOpenDetail} className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center space-x-1.5">
+              <i className="fa-solid fa-pen-to-square text-[11px]"></i><span>근무 및 일정 상세 수정</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
 
-        function saveData() {
-            if (!currentSelectedDate) return;
+    function DateDetailModal({ dateStr, onClose, settings, overrideShift, onSetOverride, events, onAddEvent, onDeleteEvent }) {
+      const autoCalculated = calculateAutoShift(dateStr, settings);
+      const currentShift = overrideShift || autoCalculated.shift;
+      const isManual = !!overrideShift;
 
-            calendarData[currentSelectedDate] = {
-                shift: document.getElementById('input-shift').value,
-                schedule: document.getElementById('input-schedule').value,
-                workoutType: selectedWorkout,
-                workout: selectedWorkout === 'crossfit' ? '크로스핏' : (selectedWorkout === 'running' ? '러닝' : ''),
-                workoutDetail: document.getElementById('input-workout-detail').value
-            };
+      const [title, setTitle] = useState('');
+      const [time, setTime] = useState('');
+      const [note, setNote] = useState('');
 
-            closeModal();
-            renderCalendar();
-        }
+      const handleAddEventSubmit = (e) => {
+        e.preventDefault();
+        if (!title.trim()) return;
+        onAddEvent({ id: Date.now().toString(), title: title.trim(), time, note });
+        setTitle(''); setTime(''); setNote('');
+      };
 
-        // 초기 렌더링 실행
-        renderCalendar();
-    </script>
+      const dateObj = new Date(dateStr + 'T00:00:00');
+      const dayOfWeekKorean = ['일', '월', '화', '수', '목', '금', '토'][dateObj.getDay()];
+      const holidayName = getHolidayName(dateStr);
+
+      return (
+        <div onClick={onClose} className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 my-auto flex flex-col max-h-[90vh]">
+            <div className="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-base sm:text-lg font-bold">{dateStr} ({dayOfWeekKorean})</h3>
+                  {holidayName && (<span className="bg-red-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">{holidayName}</span>)}
+                </div>
+                <p className="text-[11px] text-slate-300 mt-0.5">근무 수정 및 개인 일정 관리</p>
+              </div>
+              <button onClick={onClose} className="p-1.5 hover:bg-slate-800 rounded-xl text-slate-300 hover:text-white transition"><i className="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">오늘의 근무 설정</label>
+                <div className="bg-slate-50 rounded-xl p-2.5 mb-2.5 border border-slate-200/80 flex items-center justify-between text-xs">
+                  <div><span className="text-slate-500">자동 스케줄: </span><span className="font-bold text-slate-800">{autoCalculated.shift}</span>{autoCalculated.isRuleModified && (<span className="text-red-500 font-medium ml-1">({autoCalculated.reason} 비번)</span>)}</div>
+                  {isManual ? (<span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-md">수동 변경됨</span>) : (<span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-md">자동 적용중</span>)}
+                </div>
+                <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                  {['주간', '당직', '비번', '연차'].map((shiftOpt) => {
+                    const isSelected = currentShift === shiftOpt;
+                    return (
+                      <button key={shiftOpt} onClick={() => onSetOverride(shiftOpt)} className={`py-2 px-2 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center space-y-0.5 ${isSelected ? "bg-slate-800 text-white border-slate-800 shadow-sm" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"}`}>
+                        <span>{shiftOpt}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {isManual && (<button onClick={() => onSetOverride(null)} className="mt-2 text-xs text-blue-600 hover:underline font-medium flex items-center space-x-1"><i className="fa-solid fa-rotate-left text-[10px]"></i><span>기본 자동 스케줄로 복원</span></button>)}
+              </div>
+              <hr className="border-slate-100" />
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">개인 일정 ({events.length})</label>
+                {events.length > 0 ? (
+                  <div className="space-y-1.5 mb-3 max-h-32 overflow-y-auto custom-scrollbar">
+                    {events.map((evt) => (
+                      <div key={evt.id} className="p-2 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between text-xs">
+                        <div><div className="font-bold text-emerald-950">{evt.title}</div>{evt.time && <div className="text-emerald-700 font-semibold text-[10.5px]">{evt.time}</div>}{evt.note && <div className="text-emerald-800/80 text-[10.5px] mt-0.5">{evt.note}</div>}</div>
+                        <button onClick={() => onDeleteEvent(evt.id)} className="text-slate-400 hover:text-red-500 p-1 transition" title="일정 삭제"><i className="fa-regular fa-trash-can"></i></button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (<p className="text-xs text-slate-400 mb-3 text-center py-2 bg-slate-50 rounded-xl border border-dashed">등록된 일정이 없습니다.</p>)}
+                <form onSubmit={handleAddEventSubmit} className="space-y-2 bg-slate-50/70 p-3 rounded-2xl border border-slate-200">
+                  <div className="text-xs font-bold text-slate-700">새 일정 추가</div>
+                  <div className="flex space-x-2">
+                    <input type="text" placeholder="일정 제목" value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required />
+                    <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-24 px-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <input type="text" placeholder="메모 (선택사항)" value={note} onChange={(e) => setNote(e.target.value)} className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+                  <button type="submit" className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition">일정 등록하기</button>
+                </form>
+              </div>
+            </div>
+            <div className="bg-slate-50 px-5 py-3 border-t border-slate-100 flex justify-end shrink-0">
+              <button onClick={onClose} className="px-4 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded-xl hover:bg-slate-900 transition">닫기</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function SettingsModal({ settings, onSave, onClose }) {
+      const [anchorDate, setAnchorDate] = useState(settings.anchorDate);
+      const [anchorShift, setAnchorShift] = useState(settings.anchorShift);
+
+      const handleSubmit = (e) => { e.preventDefault(); onSave({ anchorDate, anchorShift }); };
+
+      return (
+        <div onClick={onClose} className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl shadow-xl max-w-sm w-full overflow-hidden border border-slate-100">
+            <div className="bg-slate-800 text-white px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-2"><i className="fa-solid fa-sliders text-blue-400"></i><h3 className="text-base font-bold">스케줄 기준 패턴 설정</h3></div>
+              <button onClick={onClose} className="p-1 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition"><i className="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-800 leading-relaxed">
+                <p className="font-semibold mb-1">💡 교대 패턴 작동 규칙</p>
+                <p>설정한 <strong>기준일</strong>의 근무부터 시작하여 <br /><span className="font-bold text-blue-900">주간 ➔ 당직 ➔ 비번</span> 순서로 3일 주기가 순환합니다.</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">스케줄 시작 기준일</label>
+                <input type="date" value={anchorDate} onChange={(e) => setAnchorDate(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500" required />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">기준일의 근무</label>
+                <select value={anchorShift} onChange={(e) => setAnchorShift(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="당직">당직</option>
+                  <option value="주간">주간</option>
+                  <option value="비번">비번</option>
+                </select>
+              </div>
+              <div className="pt-2 flex justify-end space-x-2">
+                <button type="button" onClick={onClose} className="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl hover:bg-slate-50 transition">취소</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition shadow-sm">설정 저장</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
 </body>
 </html>
