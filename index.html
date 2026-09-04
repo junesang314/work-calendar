@@ -697,7 +697,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.9.5</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.9.6</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -725,7 +725,7 @@
           {workoutPreviewDayInfo && (
             <WorkoutSummaryPopup 
               dayInfo={workoutPreviewDayInfo} 
-              workoutParsed={parseWorkout(workouts[workoutPreviewDayInfo.dateStr场])} 
+              workoutParsed={parseWorkout(workouts[workoutPreviewDayInfo.dateStr])} 
               onOpenEdit={() => {
                 setWorkoutPreviewDayInfo(null);
                 setQuickWorkoutModalDay(workoutPreviewDayInfo);
@@ -794,7 +794,6 @@
 
     function ShareCaptureModal({ currDate, monthlyDays, monthSummary, isWorkoutMode, onClose }) {
       const [capturing, setCapturing] = useState(false);
-      const [capturedImage, setCapturedImage] = useState(null);
       const printRef = useRef(null);
 
       const handleCapture = async () => {
@@ -807,7 +806,14 @@
             backgroundColor: isWorkoutMode ? '#0f172a' : '#ffffff'
           });
           const image = canvas.toDataURL('image/png');
-          setCapturedImage(image); // 새 창을 띄우지 않고 모달 내부에서 이미지를 바로 띄워 꾹 눌러 저장하게 변경
+          
+          // 원클릭 즉시 다운로드 트리거 적용
+          const a = document.createElement('a');
+          a.href = image;
+          a.download = `근무표_${currDate.getFullYear()}년_${currDate.getMonth() + 1}월.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
         } catch (err) {
           console.error(err);
           alert('캡처 중 오류가 발생했습니다.');
@@ -829,66 +835,50 @@
               <button onClick={onClose} className="p-1 rounded-lg"><i className="fa-solid fa-xmark text-lg"></i></button>
             </div>
 
-            {capturedImage ? (
-              <div className="space-y-3 text-center">
-                <div className="text-xs text-amber-300 font-bold bg-slate-800 p-2.5 rounded-xl border border-slate-700">
-                  👆 아래 이미지를 꾹 눌러서 <span className="text-white underline">[사진에 추가]</span> 또는 <span className="text-white underline">[이미지 저장]</span>을 선택하세요!
-                </div>
-                <div className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 p-2">
-                  <img src={capturedImage} alt="캡처된 근무표" className="w-full h-auto rounded-xl select-auto" />
-                </div>
-                <button onClick={() => setCapturedImage(null)} className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition">
-                  다시 캡처하기
-                </button>
+            <div ref={printRef} className={`p-4 rounded-2xl border space-y-3 ${captureBoxBg}`}>
+              <div className={`text-center font-bold text-lg pb-2 border-b ${headerTitleColor}`}>
+                {currDate.getFullYear()}년 {currDate.getMonth() + 1}월 근무표
               </div>
-            ) : (
-              <>
-                <div ref={printRef} className={`p-4 rounded-2xl border space-y-3 ${captureBoxBg}`}>
-                  <div className={`text-center font-bold text-lg pb-2 border-b ${headerTitleColor}`}>
-                    {currDate.getFullYear()}년 {currDate.getMonth() + 1}월 근무표
-                  </div>
-                  <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-400 pb-1">
-                    <div className="text-red-400">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="text-blue-400">토</div>
-                  </div>
-                  <div className="grid grid-cols-7 gap-1">
-                    {monthlyDays.map((day, idx) => {
-                      const shift = day.isCurrentMonth ? day.shiftInfo.shift : '';
-                      const shortShift = shift ? shift.substring(0, 1) : '';
-                      let shiftBadgeStyle = "";
-                      if (shift === '당직') shiftBadgeStyle = isWorkoutMode ? "bg-blue-500 text-white font-bold" : "bg-blue-600 text-white font-bold";
-                      else if (shift === '주간') shiftBadgeStyle = "bg-amber-400 text-slate-900 font-bold";
-                      else if (shift === '비번') shiftBadgeStyle = isWorkoutMode ? "bg-rose-950 text-rose-300 border border-rose-800 font-bold" : "bg-rose-100 text-rose-700 font-bold";
+              <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-400 pb-1">
+                <div className="text-red-400">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="text-blue-400">토</div>
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {monthlyDays.map((day, idx) => {
+                  const shift = day.isCurrentMonth ? day.shiftInfo.shift : '';
+                  const shortShift = shift ? shift.substring(0, 1) : '';
+                  let shiftBadgeStyle = "";
+                  if (shift === '당직') shiftBadgeStyle = isWorkoutMode ? "bg-blue-500 text-white font-bold" : "bg-blue-600 text-white font-bold";
+                  else if (shift === '주간') shiftBadgeStyle = "bg-amber-400 text-slate-900 font-bold";
+                  else if (shift === '비번') shiftBadgeStyle = isWorkoutMode ? "bg-rose-950 text-rose-300 border border-rose-800 font-bold" : "bg-rose-100 text-rose-700 font-bold";
 
-                      const cellNormalStyle = isWorkoutMode ? "bg-slate-800 text-white border-slate-700" : "bg-slate-50 text-slate-800 border-slate-200";
-                      const cellOtherStyle = isWorkoutMode ? "bg-slate-950/40 text-slate-600" : "bg-slate-100/40 text-slate-300";
+                  const cellNormalStyle = isWorkoutMode ? "bg-slate-800 text-white border-slate-700" : "bg-slate-50 text-slate-800 border-slate-200";
+                  const cellOtherStyle = isWorkoutMode ? "bg-slate-950/40 text-slate-600" : "bg-slate-100/40 text-slate-300";
 
-                      return (
-                        <div key={idx} className={`p-1.5 rounded-xl text-center flex flex-col items-center justify-center min-h-[55px] border ${day.isCurrentMonth ? cellNormalStyle : cellOtherStyle}`}>
-                          <span className="text-xs font-bold mb-1">{day.dayNum}</span>
-                          {shortShift && (
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full shadow-2xs ${shiftBadgeStyle}`}>
-                              {shortShift}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className={`text-right text-[11px] pt-2 border-t ${footerBorderColor}`}>
-                    당직: {monthSummary.당직} | 주간: {monthSummary.주간} | 비번: {monthSummary.비번}
-                  </div>
-                </div>
+                  return (
+                    <div key={idx} className={`p-1.5 rounded-xl text-center flex flex-col items-center justify-center min-h-[55px] border ${day.isCurrentMonth ? cellNormalStyle : cellOtherStyle}`}>
+                      <span className="text-xs font-bold mb-1">{day.dayNum}</span>
+                      {shortShift && (
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full shadow-2xs ${shiftBadgeStyle}`}>
+                          {shortShift}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className={`text-right text-[11px] pt-2 border-t ${footerBorderColor}`}>
+                당직: {monthSummary.당직} | 주간: {monthSummary.주간} | 비번: {monthSummary.비번}
+              </div>
+            </div>
 
-                <div className="flex space-x-2 pt-2">
-                  <button onClick={handleCapture} disabled={capturing} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center justify-center space-x-1.5 disabled:opacity-50">
-                    <i className="fa-solid fa-camera"></i><span>{capturing ? '이미지 생성 중...' : '이미지 생성하기'}</span>
-                  </button>
-                  <button onClick={onClose} className={`px-4 py-3 rounded-xl transition text-xs font-bold ${isWorkoutMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>
-                    닫기
-                  </button>
-                </div>
-              </>
-            )}
+            <div className="flex space-x-2 pt-2">
+              <button onClick={handleCapture} disabled={capturing} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center justify-center space-x-1.5 disabled:opacity-50">
+                <i className="fa-solid fa-download"></i><span>{capturing ? '다운로드 중...' : '이미지로 저장하기'}</span>
+              </button>
+              <button onClick={onClose} className={`px-4 py-3 rounded-xl transition text-xs font-bold ${isWorkoutMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>
+                닫기
+              </button>
+            </div>
           </div>
         </div>
       );
