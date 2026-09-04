@@ -697,7 +697,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.9.8</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.9.9</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -790,6 +790,64 @@
         );
       }
       return <span className="w-6 h-6 sm:w-7 sm:h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-xs">{shift.substring(0, 1)}</span>;
+    }
+
+    function AuthModal({ user, onLogin, onLogout, onClose }) {
+      const [usernameInput, setUsernameInput] = useState('');
+
+      const handleLoginSubmit = (e) => {
+        e.preventDefault();
+        const trimmed = usernameInput.trim();
+        if (!trimmed) return;
+        onLogin(trimmed);
+      };
+
+      return (
+        <div onClick={onClose} className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[250] flex items-center justify-center p-4">
+          <div onClick={(e) => e.stopPropagation()} className="bg-slate-900 text-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-800 p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold flex items-center space-x-2">
+                <i className="fa-solid fa-user-gear text-blue-400"></i>
+                <span>계정 및 동기화 설정</span>
+              </h3>
+              <button onClick={onClose} className="p-1 text-slate-400 hover:text-white rounded-lg"><i className="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            {user ? (
+              <div className="space-y-4">
+                <div className="bg-slate-800 p-3.5 rounded-2xl border border-slate-700 text-xs space-y-1">
+                  <p className="text-slate-400">현재 연결된 계정:</p>
+                  <p className="font-bold text-emerald-400 text-sm">👤 {user}</p>
+                </div>
+                <button onClick={onLogout} className="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition shadow-sm">
+                  로그아웃 (연동 해제)
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleLoginSubmit} className="space-y-3">
+                <div className="bg-blue-950/60 border border-blue-900/80 rounded-xl p-3 text-xs text-blue-200 leading-relaxed">
+                  <p className="font-semibold mb-1">💡 기기 간 스케줄 동기화</p>
+                  <p>사용하시는 고유한 <strong>닉네임(아이디)</strong>을 입력하시면 컴퓨터와 핸드폰에서 동일한 근무표와 일정을 공유하실 수 있습니다.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">계정 이름 (닉네임)</label>
+                  <input 
+                    type="text" 
+                    placeholder="예: junesang" 
+                    value={usernameInput} 
+                    onChange={(e) => setUsernameInput(e.target.value)} 
+                    className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-blue-500 font-semibold" 
+                    required 
+                  />
+                </div>
+                <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition shadow-sm">
+                  로그인 및 연동 시작
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      );
     }
 
     function ShareCaptureModal({ currDate, monthlyDays, monthSummary, isWorkoutMode, onClose }) {
