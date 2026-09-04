@@ -425,7 +425,6 @@
                   } else if (isSunday || isHoliday) dateNumColor = "text-red-400 font-bold";
                   else if (isSaturday) dateNumColor = "text-blue-400 font-bold";
 
-                  // [수정사항] 운동 모드일 때 빈 날짜 셀 배경을 확실하고 깔끔한 다크 톤(bg-slate-900)으로 강제 통일
                   let cellBgStyle = isWorkoutMode ? 'bg-slate-900' : 'bg-white';
                   if (!day.isCurrentMonth) cellBgStyle = isWorkoutMode ? "bg-slate-950/80" : "bg-slate-50/40";
                   else if (day.hasWorkout) cellBgStyle = isWorkoutMode ? "bg-amber-600/90 border-amber-500/60 shadow-md" : "bg-blue-800/60 border-blue-400/50 shadow-sm";
@@ -506,7 +505,7 @@
                   const isHoliday = !!day.holidayName;
                   const dayNames = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
                   
-                  // [수정사항] 운동 모드일 때 위클리 상단 헤더도 무조건 bg-slate-950 다크 톤으로 강제 통일 (파란색/흰색 잔재 제거)
+                  // [수정사항] 운동 모드일 때 위클리 헤더 배경 강제 적용 (bg-slate-950)
                   let headerBg = isWorkoutMode ? "bg-slate-950 text-slate-300 border-b border-slate-800" : "bg-slate-50 text-slate-700";
                   let dateNumColor = isWorkoutMode ? "text-slate-100" : "text-slate-800";
                   
@@ -528,7 +527,7 @@
                     else if (shift === '비번') shiftBoxStyle = "bg-rose-100/80 border-rose-200";
                   }
 
-                  // [수정사항] 운동 모드 위클리 카드 배경도 다크 톤(bg-slate-900)으로 강제 통일 (운동한 날은 앰버 보색)
+                  // [수정사항] 운동 모드 위클리 카드 배경 강제 적용 (bg-slate-900 / 운동한 날은 앰버 보색)
                   let cardBg = isWorkoutMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200";
                   if (day.hasWorkout) {
                     cardBg = isWorkoutMode ? "bg-amber-600/90 border-amber-500/60 shadow-md text-white" : "bg-blue-50/40 ring-2 ring-blue-800 border-blue-800";
@@ -700,7 +699,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.7.6</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.7.7</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
