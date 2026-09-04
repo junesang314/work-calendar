@@ -408,7 +408,7 @@
           const days = getMonthlyDays(targetDate);
           return (
             <div className={`rounded-2xl shadow-sm border overflow-hidden transition-colors ${isWorkoutMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-              <div className={`grid grid-cols-7 border-b text-center font-semibold text-xs py-2.5 ${isWorkoutMode ? 'bg-slate-950/80 text-slate-400 border-slate-800' : 'bg-slate-50/70 text-slate-600 border-slate-200'}`}>
+              <div className={`grid grid-cols-7 border-b text-center font-semibold text-xs py-2.5 ${isWorkoutMode ? 'bg-slate-950 text-slate-400 border-slate-800' : 'bg-slate-50/70 text-slate-600 border-slate-200'}`}>
                 <div className="text-red-400">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="text-blue-400">토</div>
               </div>
               <div className={`grid grid-cols-7 auto-rows-fr divide-x divide-y ${isWorkoutMode ? 'divide-slate-800' : 'divide-slate-100'}`}>
@@ -425,10 +425,10 @@
                   } else if (isSunday || isHoliday) dateNumColor = "text-red-400 font-bold";
                   else if (isSaturday) dateNumColor = "text-blue-400 font-bold";
 
-                  // [수정사항] 운동 모드일 때 빈 날짜 셀 배경을 확실한 어두운 다크 톤(bg-slate-900)으로 완벽 통일
+                  // [수정사항] 운동 모드일 때 빈 날짜 셀 배경을 확실하고 깔끔한 다크 톤(bg-slate-900)으로 강제 통일
                   let cellBgStyle = isWorkoutMode ? 'bg-slate-900' : 'bg-white';
-                  if (!day.isCurrentMonth) cellBgStyle = isWorkoutMode ? "bg-slate-950/60" : "bg-slate-50/40";
-                  else if (day.hasWorkout) cellBgStyle = isWorkoutMode ? "bg-amber-600/80 border-amber-500/60 shadow-md" : "bg-blue-800/60 border-blue-400/50 shadow-sm";
+                  if (!day.isCurrentMonth) cellBgStyle = isWorkoutMode ? "bg-slate-950/80" : "bg-slate-50/40";
+                  else if (day.hasWorkout) cellBgStyle = isWorkoutMode ? "bg-amber-600/90 border-amber-500/60 shadow-md" : "bg-blue-800/60 border-blue-400/50 shadow-sm";
 
                   return (
                     <div
@@ -506,11 +506,11 @@
                   const isHoliday = !!day.holidayName;
                   const dayNames = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
                   
-                  // [수정사항] 운동 모드일 때 위클리 상단 헤더도 완벽한 다크 톤(bg-slate-950)으로 통일
+                  // [수정사항] 운동 모드일 때 위클리 상단 헤더도 무조건 bg-slate-950 다크 톤으로 강제 통일 (파란색/흰색 잔재 제거)
                   let headerBg = isWorkoutMode ? "bg-slate-950 text-slate-300 border-b border-slate-800" : "bg-slate-50 text-slate-700";
                   let dateNumColor = isWorkoutMode ? "text-slate-100" : "text-slate-800";
                   
-                  if (day.isToday) { 
+                  if (day.isToday && !isWorkoutMode) { 
                     headerBg = "bg-blue-600 text-white"; 
                     dateNumColor = "text-white"; 
                   } else if (isSunday || isHoliday) {
@@ -528,10 +528,10 @@
                     else if (shift === '비번') shiftBoxStyle = "bg-rose-100/80 border-rose-200";
                   }
 
-                  // [수정사항] 운동 모드 위클리 카드 배경도 다크 톤(bg-slate-900)으로 완벽 통일 (운동한 날은 앰버 보색)
+                  // [수정사항] 운동 모드 위클리 카드 배경도 다크 톤(bg-slate-900)으로 강제 통일 (운동한 날은 앰버 보색)
                   let cardBg = isWorkoutMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200";
                   if (day.hasWorkout) {
-                    cardBg = isWorkoutMode ? "bg-amber-600/80 border-amber-500/60 shadow-md text-white" : "bg-blue-50/40 ring-2 ring-blue-800 border-blue-800";
+                    cardBg = isWorkoutMode ? "bg-amber-600/90 border-amber-500/60 shadow-md text-white" : "bg-blue-50/40 ring-2 ring-blue-800 border-blue-800";
                   }
 
                   return (
@@ -542,7 +542,7 @@
                       onMouseDown={() => handleCellTouchStart(day)}
                       onMouseUp={handleCellTouchEnd}
                       onClick={() => handleCellClick(day)}
-                      className={`rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden cursor-pointer hover:brightness-110 ${cardBg} ${day.isToday ? "ring-2 ring-blue-500 border-blue-500" : ""}`}
+                      className={`rounded-2xl shadow-sm border transition flex flex-col justify-between overflow-hidden cursor-pointer hover:brightness-110 ${cardBg} ${day.isToday && !isWorkoutMode ? "ring-2 ring-blue-500 border-blue-500" : ""}`}
                     >
                       <div className={`p-2.5 flex items-center justify-between ${headerBg}`}>
                         <div>
@@ -560,7 +560,7 @@
                             </div>
                           )}
                           {day.holidayName && (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${day.isToday ? 'bg-red-500 text-white' : (isWorkoutMode ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-red-100 text-red-600')}`}>{day.holidayName}</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${day.isToday && !isWorkoutMode ? 'bg-red-500 text-white' : (isWorkoutMode ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-red-100 text-red-600')}`}>{day.holidayName}</span>
                           )}
                         </div>
                       </div>
@@ -700,7 +700,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.7.5</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.7.6</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
