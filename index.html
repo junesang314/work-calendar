@@ -697,7 +697,7 @@
           </div>
 
           <div className="mt-2 mb-1 text-center select-none">
-            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.9.2</span>
+            <span className="text-[10.5px] font-semibold text-slate-400/80 bg-slate-200/50 px-3 py-0.5 rounded-full border border-slate-200/60">근무표 v2.9.3</span>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 py-2.5 px-6 sm:hidden z-40 flex items-center justify-around shadow-lg">
@@ -841,6 +841,7 @@
               <div className="grid grid-cols-7 gap-1">
                 {monthlyDays.map((day, idx) => {
                   const shift = day.isCurrentMonth ? day.shiftInfo.shift : '';
+                  const shortShift = shift ? shift.substring(0, 1) : ''; // 주간->주, 당직->당, 비번->비 (주당비 스타일)
                   let shiftBadgeStyle = "";
                   if (shift === '당직') shiftBadgeStyle = isWorkoutMode ? "bg-blue-500 text-white font-bold" : "bg-blue-600 text-white font-bold";
                   else if (shift === '주간') shiftBadgeStyle = "bg-amber-400 text-slate-900 font-bold";
@@ -852,9 +853,9 @@
                   return (
                     <div key={idx} className={`p-1.5 rounded-xl text-center flex flex-col items-center justify-center min-h-[55px] border ${day.isCurrentMonth ? cellNormalStyle : cellOtherStyle}`}>
                       <span className="text-xs font-bold mb-1">{day.dayNum}</span>
-                      {shift && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full shadow-2xs ${shiftBadgeStyle}`}>
-                          {shift}
+                      {shortShift && (
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full shadow-2xs ${shiftBadgeStyle}`}>
+                          {shortShift}
                         </span>
                       )}
                     </div>
